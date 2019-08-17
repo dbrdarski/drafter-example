@@ -46,30 +46,58 @@ const h = (tagName, attrs = {}, ...children) => {
   return { tagName, attrs, children };
 };
 
-const renderNodeChildren = ($el, children, updates) => {
-  for (const child of children) {
-    const type = typeof child;
-    if ( type === 'function' ) {
-      let c, $child, $updates;
-      // let $child = createDOMElement(c, $el);
-      const update = () => {
-        const d = child();
-        // console.log({d, c})
-        if (d !== c) {
-          const [ $newChild, $newUpdates ] = createDOMElement(d, $el, $child);
-          $child = $newChild;
-          c = d;
-        }
-        $updates && $updates();
-      };
-      updates.push(update);
-      update();
-      // console.log('SHOULD PUSH!', { updates })
-    } else if (Array.isArray(child)){
-      renderNodeChildren($el, child, updates);
-    } else {
-      const [$newEl, update ] = createDOMElement(child, $el);
-      update && updates.push(update)
+
+const updateNodes2Node = ($parent, $newNode, $oldNodes) => {
+  $parent.insertBefore($newNode, $oldNodes[0]),
+  $oldNodes.forEach($o => $parent.removeChild($o))
+};
+
+const updateNode2Nodes = ($parent, $newNodes, $oldNode) => {
+  $newNodes.forEach($n => $parent.insertBefore($n, $oldNode));
+  $parent.removeChild($oldNode);
+};
+
+const renderNode = ({ tagName, attrs, children }) => {
+  const updates = [];
+  const $el = document.createElement(tagName);
+
+  if (attrs) {
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k.match(eventHandler)) {
+        $el[k] = v;
+      } else if (typeof v === 'function') {
+        const update = updateAttr.bind(null, $el, k, v);
+        updates.push(update);
+        update();
+      } else {
+        $el.setAttribute(k, v);
+      }
+    }
+  }
+
+  if (children) {
+    for (const child of children) {
+      const type = typeof child;
+      if ( type === 'function' ) {
+        let c, $child, $updates;
+        // let $child = createDOMElement(c, $el);
+        const update = () => {
+          const d = child();
+          // console.log({d, c})
+          if (d !== c) {
+            const [ $newChild, $newUpdates ] = createDOMElement(d, $el, $child);
+            $child = $newChild;
+            c = d;
+          }
+          $updates && $updates();
+        };
+        updates.push(update);
+        update();
+        // console.log('SHOULD PUSH!', { updates })
+      } else {
+        const [$newEl, update ] = createDOMElement(child, $el);
+        update && updates.push(update)
+      }
     }
   }
 };
@@ -309,9 +337,11 @@ var { $state, setState, subscribe } = createState({
   count: 0,
   color: 'green'
 });
+
 window.$state = $state;
 const incrementClicks = () => setState(state => state.count++);
 const updateName = (e) => $state.name = e.target.value;
+const selectColor = (e) => $state.color = e.target.value;
 
 var attrs = { dynamicAttr: 2 };
 var buttonStyle = () => ({
@@ -320,45 +350,118 @@ var buttonStyle = () => ({
   border: `5px solid ${$state.color}`
 });
 
+var colors = ['red', 'orange', 'purple', 'black'];
+
+// const example4 = ({ connectStore } = {}) => {
+//   // const updateState = createState({
+//   //   counter: 1,
+//   //   input: ''
+//   // });
+//
+//   // connectStore({ Auth });
+//   // connectStore({ VAT });
+//   //
+//   // const onClick = () => {
+//     // updateState(({ state }) => state.counter++);
+//   // };
+//   //
+//   // const removeSubscriber = (subscriber) => () => Channel.removeSubscriberById(subscriber.id);
+//
+//   // return () => {
+//     // const { user } = Auth;
+//
+//     return h('div', {},
+//       h('label', {
+//         for: 'name'
+//       }, 'Your name '),
+//       h('br'),
+//       h('input', {
+//         type: 'text',
+//         id: 'name',
+//         value: () => $state.name,
+//         oninput: updateName
+//       }),
+//       h('p', {},
+//         () => `Hi, ${$state.name || 'John Doe'}! You have clicked ${$state.count} time${$state.count !== 1 ? 's' : ''} on the ${$state.color} button.`,
+//       ),
+//       h('button', {
+//         style: buttonStyle,
+//         onclick: incrementClicks
+//       }, 'Increment!'),
+//       h('p', {},
+//         ...colors.map( color => h('label', { },
+//           h('input', {
+//             type: 'radio',
+//             value: color,
+//             name: 'color',
+//             id: color,
+//             onchange: selectColor
+//           }),
+//           color
+//         )
+//         )
+//       )
+//     );
+//     // <div id="app" dynamicAttr={ attrs.dynamicAttr }>
+//     //   <p class="static">Hello, { user.name }</p>
+//     //   <p>You clicked { state.count } times!</p>
+//     //   <button onclick={ console.log }>Click me!!!</button>
+//     //   { $.and(user.hasSubscribers, (
+//     //     <div class="subscribers">
+//     //       <h1>Top subscriber</h1>
+//     //       <p>{ Channel.subscribers[ Channel.TopUser ] }</p>
+//     //       Whatever, { () => user.name }
+//     //       <ul>
+//     //         { Channel.subscribers.map( subscriber => {
+//     //           return (
+//     //             <li key={ subscriber.id }>
+//     //               <span>{ subscriber.name }</span>
+//     //               <button onClick={ removeSubscriber(subscriber) }>Remove</button>
+//     //             </li>
+//     //           ); }
+//     //         ) }
+//     //       </ul>
+//     //     </div>
+//     //   ) }
+//     //   { $.if(
+//     //     state.someCondition,
+//     //     <div>No data found.</div>,
+//     //     <Component2 user={ user } />
+//     //   ) }
+//     // </div>
+//     // );
+//   // };
+// };
+
 const example4 = ({ connectStore } = {}) => {
-  // const updateState = createState({
-  //   counter: 1,
-  //   input: ''
-  // });
+  return (
+    <div>
+      <label for="name">Your name</label>
+      <br />
+      <input type="text" id="name" value={() => $state.name} oninput={updateName} />
+      <p> { () => `Hi, ${$state.name || 'John Doe'}! You have clicked ${$state.count} time${$state.count !== 1 ? 's' : ''} on the ${$state.color} button.` } </p>
+      <button style={buttonStyle} onclick={incrementClicks}> Increment! </button>
+      <p>
+        { colors.map( color => {
+        console.log(color);
+        var asd = (
+          <label>
+            <input
+              type="radio"
+              value={color}
+              name={color}
+              id={color}
+              onchange={selectColor}
+            />
+            { color }
+          </label>
+        );
+        return asd;
+      }) }
+      </p>
+    </div>
+  );
 
-  // connectStore({ Auth });
-  // connectStore({ VAT });
-  //
-  // const onClick = () => {
-    // updateState(({ state }) => state.counter++);
-  // };
-  //
-  // const removeSubscriber = (subscriber) => () => Channel.removeSubscriberById(subscriber.id);
-
-  // return () => {
-    // const { user } = Auth;
-    return h('div', {},
-      h('label', {
-        for: 'name'
-      }, 'Your name '),
-      h('br'),
-      h('input', {
-        type: 'text',
-        id: 'name',
-        value: () => $state.name,
-        oninput: updateName
-      }),
-      h('p', {},
-        () => `Hi, ${$state.name || 'John Doe'}! You have clicked ${$state.count} time${$state.count !== 1 ? 's' : ''} on the ${$state.color} button.`,
-      ),
-      h('button', {
-        style: buttonStyle,
-        onclick: incrementClicks
-      }, 'Increment!'),
-      h('p', {},
-        () => [1,2,3]
-      )
-    );
     // <div id="app" dynamicAttr={ attrs.dynamicAttr }>
     //   <p class="static">Hello, { user.name }</p>
     //   <p>You clicked { state.count } times!</p>
