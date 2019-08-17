@@ -13,8 +13,12 @@ const updateAttr = ($el, k, condition) => {
     $el.removeAttribute(k);
   } else {
     switch (k) {
-      case 'value':{
+      case 'value': {
         $el[k] = v;
+        break;
+      }
+      case 'style': {
+        Object.assign($el.style, v);
         break;
       }
       default: {
@@ -296,13 +300,19 @@ const $mod = (x, y) => () => lift(x) % lift(y);
 
 var { $state, setState, subscribe } = createState({
   name: 'John Doe',
-  count: 1
+  count: 0,
+  color: 'green'
 });
 window.$state = $state;
 const incrementClicks = () => setState(state => state.count++);
 const updateName = (e) => $state.name = e.target.value;
 
 var attrs = { dynamicAttr: 2 };
+var buttonStyle = () => ({
+  background: $state.color,
+  color: 'white',
+  border: `5px solid ${$state.color}`
+});
 
 const example4 = ({ connectStore } = {}) => {
   // const updateState = createState({
@@ -322,18 +332,23 @@ const example4 = ({ connectStore } = {}) => {
   // return () => {
     // const { user } = Auth;
     return h('div', {},
+      h('label', {
+        for: 'name'
+      }, 'Your name '),
+      h('br'),
       h('input', {
         type: 'text',
+        id: 'name',
         value: () => $state.name,
         oninput: updateName
       }),
       h('p', {},
-        () => `Hi ${$state.name}. `,
-        'You cliked ',
-        () => $state.count,
-        ' times.'
+        () => `Hi, ${$state.name || 'John Doe'}! You have clicked ${$state.count} time${$state.count !== 1 ? 's' : ''} on the ${$state.color} button.`,
       ),
-      h('button', { onclick: incrementClicks }, 'Increment!')
+      h('button', {
+        style: buttonStyle,
+        onclick: incrementClicks
+      }, 'Increment!')
     );
     // <div id="app" dynamicAttr={ attrs.dynamicAttr }>
     //   <p class="static">Hello, { user.name }</p>
