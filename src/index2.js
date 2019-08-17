@@ -1,3 +1,5 @@
+import { createState } from '../../drafter/src/state';
+const eventHandler = /^on[\w\d]+/g;
 // const componentExample = (createState) => {
 //   const updateState = createState({ greeting: 'Hello', color: 'white'});
 //   return (
@@ -10,10 +12,17 @@ const updateAttr = ($el, k, condition) => {
   if (v == null) {
     $el.removeAttribute(k);
   } else {
-    // console.log({$el, k, v, condition})
-    $el.setAttribute(k, v);
+    switch (k) {
+      case 'value':{
+        $el[k] = v;
+        break;
+      }
+      default: {
+        $el.setAttribute(k, v);
+      }
+    }
   }
-  console.log("UPDATE ATTRS")
+  // console.log("UPDATE ATTRS")
 };
 
 const createDOMElement = (vNode, $parent, $old) => {
@@ -23,22 +32,24 @@ const createDOMElement = (vNode, $parent, $old) => {
     $old
       ? $parent.replaceChild(textNode, $old)
       : $parent.appendChild(textNode);
-    return textNode;
+    return [ textNode ];
   } else {
     return renderNode(vNode)($parent);
   }
-}
+};
 
 const h = (tagName, attrs = {}, ...children) => {
   return { tagName, attrs, children };
-}
+};
 
 const renderNode = ({ tagName, attrs, children }) => {
   const updates = [];
   const $el = document.createElement(tagName);
 
   for (const [k, v] of Object.entries(attrs)) {
-    if (typeof v === 'function') {
+    if (k.match(eventHandler)) {
+      $el[k] = v;
+    } else if (typeof v === 'function') {
       const update = updateAttr.bind(null, $el, k, v);
       updates.push(update);
       update();
@@ -50,26 +61,29 @@ const renderNode = ({ tagName, attrs, children }) => {
   for (const child of children) {
     const type = typeof child;
     if ( type === 'function' ) {
-      let c, $child;
+      let c, $child, $updates;
       // let $child = createDOMElement(c, $el);
       const update = () => {
         const d = child();
-        console.log({d, c})
-        // if (d !== c) {
-        $child = createDOMElement(d, $el, $child);
-        c = d;
-        // }
+        // console.log({d, c})
+        if (d !== c) {
+          const [ $newChild, $newUpdates ] = createDOMElement(d, $el, $child);
+          $child = $newChild;
+          c = d;
+        }
+        $updates && $updates();
       };
       updates.push(update);
       update();
-      console.log('SHOULD PUSH!', { updates })
+      // console.log('SHOULD PUSH!', { updates })
     } else {
-      createDOMElement(child, $el);
+      const [$newEl, update ] = createDOMElement(child, $el);
+      update && updates.push(update)
     }
   }
 
   const update = () => {
-    console.log({ updates })
+    // console.log({ updates })
     updates.forEach( u => u ())
   };
 
@@ -78,10 +92,10 @@ const renderNode = ({ tagName, attrs, children }) => {
     $old
     ? $parent.replaceChild($el, $old)
     : $parent.appendChild($el);
-    return $el;
-    // return [ $el, update ];
+    // return $el;
+    return [ $el, update ];
   }
-}
+};
 
 const componentExample = ({ createState } = {}) => {
   // const updateState = createState({ greeting: 'Hello', color: 'white'});
@@ -107,97 +121,97 @@ const componentExample = ({ createState } = {}) => {
 };
 
 // console.log(componentExample());
-window.vdom = renderNode(componentExample())(document.body);
-
-const example2 = ({ attrs, createState }) => {
-  const state = createState({ someState:  });
-  const user = connectStore(Auth);
-  return (
-    <div dynamicAttr={ () => attrs.dynamicAttr }>
-      <div class="static">Hello, {() => state.user.name }</div>
-      { () => state.user.hasSubscribers && (
-        <div class="subscribers">
-          Whatever, { () => state.user.name }
-        </div>
-      ) }
-      { () => state.someCondition
-        ? <Component1 user={state.user} />
-        : <Component2 user={state.user} />
-      }
-    </div>
-  )
-}
-
-const example3 = ({ attrs, createState }) => {
-  const state = createState({ someState:  });
-  const user = connectStore(Auth);
-  return (
-    <div dynamicAttr={ () => attrs.dynamicAttr }>
-      <div class="static">Hello, {() => state.user.name }</div>
-      <GUARD if={state.user.hasSubscribers}>
-        <div class="subscribers">
-          Whatever, { () => state.user.name }
-        </div>
-      </GUARD>
-      <IF>
-        ) }
-      { () => state.someCondition
-        ? <Component1 user={state.user} />
-        : <Component2 user={state.user} />
-      }
-      </IF>
-    </div>
-  )
-}
+// const example2 = ({ attrs, createState }) => {
+//   const state = createState({ someState: 1 });
+//   const user = connectStore(Auth);
+//   return (
+//     <div dynamicAttr={ () => attrs.dynamicAttr }>
+//       <div class="static">Hello, {() => state.user.name }</div>
+//       { () => state.user.hasSubscribers && (
+//         <div class="subscribers">
+//           Whatever, { () => state.user.name }
+//         </div>
+//       ) }
+//       { () => state.someCondition
+//         ? <Component1 user={state.user} />
+//         : <Component2 user={state.user} />
+//       }
+//     </div>
+//   )
+// }
+//
+// const example3 = ({ attrs, createState }) => {
+//   const state = createState({ someState:  });
+//   const user = connectStore(Auth);
+//   return (
+//     <div dynamicAttr={ () => attrs.dynamicAttr }>
+//       <div class="static">Hello, {() => state.user.name }</div>
+//       <GUARD if={state.user.hasSubscribers}>
+//         <div class="subscribers">
+//           Whatever, { () => state.user.name }
+//         </div>
+//       </GUARD>
+//       <IF>
+//         ) }
+//       { () => state.someCondition
+//         ? <Component1 user={state.user} />
+//         : <Component2 user={state.user} />
+//       }
+//       </IF>
+//     </div>
+//   )
+// }
 
 
-const example4 = ({ createState, connectStore }) => {
-
-  const updateState = createState({
-    counter: 1,
-    input: ''
-  });
-
-  connectStore({ Auth });
-  connectStore({ VAT });
-
-  const onClick = () => {
-    updateState(({ state }) => state.counter++);
-  };
-
-  const removeSubscriber = (subscriber) => () => Channel.removeSubscriberById(subscriber.id);
-
-  return ({ attrs, state, Auth, Channel }) => {
-    const { user } = Auth;
-    return (
-      <div dynamicAttr={ attrs.dynamicAttr }>
-        <p class="static">Hello, { user.name }</p>
-        <p>You clicked { state.count } times!</p>
-        <button onclick={ onClick }>Click me!!!</button>
-        { $.and(user.hasSubscribers, (
-          <div class="subscribers">
-            Whatever, { () => user.name }
-            <ul>
-              { Channel.subscribers.map( subscriber => {
-                return (
-                  <li key={ subscriber.id }>
-                    <span>{ subscriber.name }</span>
-                    <button onClick={ removeSubscriber(subscriber) }>Remove</button>
-                  </li>
-                ); }
-              ) }
-            </ul>
-          </div>
-        ) }
-        { $.if(
-          state.someCondition,
-          <Component1 user={ user } />,
-          <Component2 user={ user } />
-        ) }
-      </div>
-    );
-  };
-};
+// const example4 = ({ createState, connectStore }) => {
+//
+//   const updateState = createState({
+//     counter: 1,
+//     input: ''
+//   });
+//
+//   connectStore({ Auth });
+//   connectStore({ VAT });
+//
+//   const onClick = () => {
+//     updateState(({ state }) => state.counter++);
+//   };
+//
+//   const removeSubscriber = (subscriber) => () => Channel.removeSubscriberById(subscriber.id);
+//
+//   return ({ attrs, state, Auth, Channel }) => {
+//     const { user } = Auth;
+//     return (
+//       <div id="app" dynamicAttr={ attrs.dynamicAttr }>
+//         <p class="static">Hello, { user.name }</p>
+//         <p>You clicked { state.count } times!</p>
+//         <button onclick={ onClick }>Click me!!!</button>
+//         { $.and(user.hasSubscribers, (
+//           <div class="subscribers">
+//             <h1>Top subscriber</h1>
+//             <p>{ Channel.subscribers[ Channel.TopUser ] }</p>
+//             Whatever, { () => user.name }
+//             <ul>
+//               { Channel.subscribers.map( subscriber => {
+//                 return (
+//                   <li key={ subscriber.id }>
+//                     <span>{ subscriber.name }</span>
+//                     <button onClick={ removeSubscriber(subscriber) }>Remove</button>
+//                   </li>
+//                 ); }
+//               ) }
+//             </ul>
+//           </div>
+//         ) }
+//         { $.if(
+//           state.someCondition,
+//           <div>No data found.</div>,
+//           <Component2 user={ user } />
+//         ) }
+//       </div>
+//     );
+//   };
+// };
 
 const map = (arr, fn) => {
   let cacheArr, result;
@@ -215,36 +229,48 @@ const lift = (v, args) => typeof v === 'function' ? v.apply(null, args) : v;
 const $and = (x, y) => (...args) => lift(x, args) && lift(y, args);
 const $or = (x, y) => (...args) => lift(x, args) || lift(y, args);
 
-const $if = (x, y, z) => (...args) => lift(x, args) ? lift(y, args) : lift(z, args);
+// const $if = (x, y, z) => (...args) => lift(x, args) ? lift(y, args) : lift(z, args);
 
-const $if2 = (x, y, z) => {
-  let cache1, cache2, result;
-  return (...args) => {
-    const condition = lift(x, args);
-    if (condition) {
-      result = lift(y, args);
-      if result !== void 0;
-        cache1 = result;
-    } else {
-      result = lift(z, args);
-      if result !== void 0;
-        cache2 = result;
-    }
-    return result;
-  };
-};
+// const $if2 = (x, y, z) => {
+//   let cache1, cache2, result;
+//   return (...args) => {
+//     const condition = lift(x, args);
+//     if (condition) {
+//       result = lift(y, args);
+//       if result !== void 0;
+//         cache1 = result;
+//     } else {
+//       result = lift(z, args);
+//       if result !== void 0;
+//         cache2 = result;
+//     }
+//     return result;
+//   };
+// };
+//
+// const $if3 = (condition, ...outcomes) => {
+//   let result, cache = [];
+//   return (...args) => {
+//     const outcome = Number(!lift(x, args));
+//     result = lift(outcomes[outcome], args);
+//     if (result !== void 0) {
+//       cache[outcome] = result;
+//     }
+//     return result;
+//   };
+// };
+//
+// const $if4 = (condition, ...outcomes) => {
+//   let result, cache = [];
+//   return (...args) => {
+//     const outcome = Number(!lift(x, args));
+//     result = outcomes[outcome];
+//     cache[outcome] = result;
+//     return lift(result, args);
+//   };
+// };
 
-const $if3 = (condition, ...outcomes) => {
-  let result, cache = [];
-  return (...args) => {
-    const outcome = Number(!lift(x, args));
-    result = lift(outcomes[outcome], args);
-    if (result !== void 0) {
-      cache[outcome] = result;
-    }
-    return result;
-  };
-};
+const $if = (condition, x, y) => (...args) => lift(lift(condition ? x : y, args));
 
 const $add = (x, y) => () => lift(x) + lift(y);
 const $sub = (x, y) => () => lift(x) - lift(y);
@@ -252,3 +278,97 @@ const $multiply = (x, y) => () => lift(x) * lift(y);
 const $divide = (x, y) => () => lift(x) / lift(y);
 const $pow = (x, y) => () => lift(x) ** lift(y);
 const $mod = (x, y) => () => lift(x) % lift(y);
+
+// $if(false, 1, $if(2, 3, 4));
+
+// { $.if(
+//   state.someCondition,
+//   <div>No data found.</div>,
+//   <Component2 user={ user } />
+// ) }
+//
+// { (...args) => lift(state.someCondition, args)
+//   ?  <div>No data found.</div>
+//   : <Component2 user={ user } />
+// }
+
+// <p>{ $.get(Channel.subscribers, Channel.TopUser }</p>
+
+var { $state, setState, subscribe } = createState({
+  name: 'John Doe',
+  count: 1
+});
+window.$state = $state;
+const incrementClicks = () => setState(state => state.count++);
+const updateName = (e) => $state.name = e.target.value;
+
+var attrs = { dynamicAttr: 2 };
+
+const example4 = ({ connectStore } = {}) => {
+  // const updateState = createState({
+  //   counter: 1,
+  //   input: ''
+  // });
+
+  // connectStore({ Auth });
+  // connectStore({ VAT });
+  //
+  // const onClick = () => {
+    // updateState(({ state }) => state.counter++);
+  // };
+  //
+  // const removeSubscriber = (subscriber) => () => Channel.removeSubscriberById(subscriber.id);
+
+  // return () => {
+    // const { user } = Auth;
+    return h('div', {},
+      h('input', {
+        type: 'text',
+        value: () => $state.name,
+        oninput: updateName
+      }),
+      h('p', {},
+        () => `Hi ${$state.name}. `,
+        'You cliked ',
+        () => $state.count,
+        ' times.'
+      ),
+      h('button', { onclick: incrementClicks }, 'Increment!')
+    );
+    // <div id="app" dynamicAttr={ attrs.dynamicAttr }>
+    //   <p class="static">Hello, { user.name }</p>
+    //   <p>You clicked { state.count } times!</p>
+    //   <button onclick={ console.log }>Click me!!!</button>
+    //   { $.and(user.hasSubscribers, (
+    //     <div class="subscribers">
+    //       <h1>Top subscriber</h1>
+    //       <p>{ Channel.subscribers[ Channel.TopUser ] }</p>
+    //       Whatever, { () => user.name }
+    //       <ul>
+    //         { Channel.subscribers.map( subscriber => {
+    //           return (
+    //             <li key={ subscriber.id }>
+    //               <span>{ subscriber.name }</span>
+    //               <button onClick={ removeSubscriber(subscriber) }>Remove</button>
+    //             </li>
+    //           ); }
+    //         ) }
+    //       </ul>
+    //     </div>
+    //   ) }
+    //   { $.if(
+    //     state.someCondition,
+    //     <div>No data found.</div>,
+    //     <Component2 user={ user } />
+    //   ) }
+    // </div>
+    // );
+  // };
+};
+
+
+// window.vdom = renderNode(componentExample())(document.body);
+const [ vdom, update ] = renderNode(example4())(document.body);
+subscribe(update);
+Object.assign(window, { vdom, update });
+// example4();

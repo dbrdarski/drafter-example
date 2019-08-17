@@ -12,6 +12,8 @@ import componentExample from './components/componentExample';
 //   console.log("VAT_SUBSCRIBE_FN", data)}
 // )
 
+window.createState = createState;
+
 const createVApp = (count) => createElement('div', { id: 'app' },
   createElement('h1', {}, count),
   createElement('img', {
@@ -35,7 +37,7 @@ const App = ({ createState }) => {
   );
 }
 
-mount(createElement(App), document.getElementById('app'));
+// mount(createElement(App), document.getElementById('app'));
 
 // let count = 0;
 // let vApp = createVApp(count);
