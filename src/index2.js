@@ -1,5 +1,5 @@
 import { createState } from '../../drafter/src/state';
-const eventHandler = /^on[\w\d]+/g;
+const eventHandler = /^on[\w]+/g;
 // const componentExample = (createState) => {
 //   const updateState = createState({ greeting: 'Hello', color: 'white'});
 //   return (
@@ -46,22 +46,7 @@ const h = (tagName, attrs = {}, ...children) => {
   return { tagName, attrs, children };
 };
 
-const renderNode = ({ tagName, attrs, children }) => {
-  const updates = [];
-  const $el = document.createElement(tagName);
-
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k.match(eventHandler)) {
-      $el[k] = v;
-    } else if (typeof v === 'function') {
-      const update = updateAttr.bind(null, $el, k, v);
-      updates.push(update);
-      update();
-    } else {
-      $el.setAttribute(k, v);
-    }
-  }
-
+const renderNodeChildren = ($el, children, updates) => {
   for (const child of children) {
     const type = typeof child;
     if ( type === 'function' ) {
@@ -80,11 +65,32 @@ const renderNode = ({ tagName, attrs, children }) => {
       updates.push(update);
       update();
       // console.log('SHOULD PUSH!', { updates })
+    } else if (Array.isArray(child)){
+      renderNodeChildren($el, child, updates);
     } else {
       const [$newEl, update ] = createDOMElement(child, $el);
       update && updates.push(update)
     }
   }
+};
+
+const renderNode = ({ tagName, attrs, children }) => {
+  const updates = [];
+  const $el = document.createElement(tagName);
+
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k.match(eventHandler)) {
+      $el[k] = v;
+    } else if (typeof v === 'function') {
+      const update = updateAttr.bind(null, $el, k, v);
+      updates.push(update);
+      update();
+    } else {
+      $el.setAttribute(k, v);
+    }
+  }
+
+  renderNodeChildren($el, children, updates);
 
   const update = () => {
     // console.log({ updates })
@@ -348,7 +354,10 @@ const example4 = ({ connectStore } = {}) => {
       h('button', {
         style: buttonStyle,
         onclick: incrementClicks
-      }, 'Increment!')
+      }, 'Increment!'),
+      h('p', {},
+        () => [1,2,3]
+      )
     );
     // <div id="app" dynamicAttr={ attrs.dynamicAttr }>
     //   <p class="static">Hello, { user.name }</p>
