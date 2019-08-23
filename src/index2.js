@@ -7,6 +7,35 @@ const eventHandler = /^on[\w]+/g;
 //   );
 // };
 
+const h = (tagName, attrs = {}, ...children) => {
+  return { tagName, attrs, children };
+};
+
+const patch = ($parent, $new, $old) => {
+  const newList = Array.isArray($new);
+  const oldList = Array.isArray($old);
+  ( newList
+    ? (oldList ? patchManyToMany : patchManyToOne)
+    : (oldList ? patchOneToMany : patchOneToOne)
+  )($parent, $new, $old)
+};
+
+const patchOneToOne = ($parent, $new, $old) => $old
+    ? $parent.replaceChild($new, $old)
+    : $parent.appendChild($new);
+
+const patchManyToOne = ($parent, $new, $old) => $old
+  ? ( $new.forEach($n => $parent.insertBefore($n, $old)), $parent.removeChild($oldNode))
+  : $new.forEach($n => $parent.appendChild($n));
+
+const patchOneToMany = ($parent, $new, $old) => $old
+  ? ( $parent.insertBefore($new, $old[0]), $old.forEach($o => $parent.removeChild($o)) )
+  : $parent.appendChild($new);
+
+const patchManyToMany = ($parent, $newNode, $oldNodes) => {
+
+};
+
 const updateAttr = ($el, k, condition) => {
   const v = condition();
   if (v == null) {
@@ -29,35 +58,77 @@ const updateAttr = ($el, k, condition) => {
   // console.log("UPDATE ATTRS")
 };
 
-const createDOMElement = (vNode, $parent, $old) => {
+// const createDOMElement = (vNode, $parent, $old) => {
+//   const type = typeof vNode;
+//   if (type === 'string' || type === 'number'){
+//     const textNode = document.createTextNode(vNode);
+//     $old
+//       ? $parent.replaceChild(textNode, $old)
+//       : $parent.appendChild(textNode);
+//     return [ textNode ];
+//   } else {
+//     return renderNode(vNode)($parent);
+//   }
+// };
+
+// const renderNode = (vNode) => {
+//   let r = R(vNode);
+//   // console.log(r)
+//   return r;
+// }
+const renderNode = (vNode) => {
   const type = typeof vNode;
-  if (type === 'string' || type === 'number'){
-    const textNode = document.createTextNode(vNode);
-    $old
-      ? $parent.replaceChild(textNode, $old)
-      : $parent.appendChild(textNode);
-    return [ textNode ];
+  if (type === 'boolean' || vNode == null) {
+    return createEmptyNode();
+  } else if (type === 'string' || type === 'number') {
+    return createTextNode(vNode);
+  } else if (type === 'function') {
+    return createExpression(vNode);
+  } else if (Array.isArray(vNode)) {
+    return createFragment(vNode);
   } else {
-    return renderNode(vNode)($parent);
+    return createElement(vNode);
   }
+}
+
+const createEmptyNode = () => [ document.createTextNode(''), false ]
+
+const createTextNode = (text) => [ document.createTextNode(text), false ];
+
+const createExpression = (fn) => {
+  let resultCache, elementCache, updatesCache;
+  const update = ($parent) => {
+    const result = fn();
+    if (result !== resultCache) {
+      const [ element, updates ] = renderNode(result);
+      $parent && patch($parent, element, elementCache);
+      elementCache = element;
+      resultCache = result;
+      updatesCache = updates;
+    }
+    updatesCache && updatesCache();
+  };
+  update();
+  return [ elementCache, update ];
 };
 
-const h = (tagName, attrs = {}, ...children) => {
-  return { tagName, attrs, children };
-};
+const createFragment = (vNodes) => {
+  const $elements = [];
+  const updates = [];
+  vNodes.forEach(vNode => {
+    const [ $el, update ] = renderNode(vNode);
+    $elements.push($el);
+    update && updates.push(update);
+  });
 
+  const update = ($parent) => {
+    updates.forEach(update => update($parent));
+  }
 
-const updateNodes2Node = ($parent, $newNode, $oldNodes) => {
-  $parent.insertBefore($newNode, $oldNodes[0]),
-  $oldNodes.forEach($o => $parent.removeChild($o))
-};
+  return [ $elements, update ];
+}
 
-const updateNode2Nodes = ($parent, $newNodes, $oldNode) => {
-  $newNodes.forEach($n => $parent.insertBefore($n, $oldNode));
-  $parent.removeChild($oldNode);
-};
-
-const renderNode = ({ tagName, attrs, children }) => {
+const createElement = ({ tagName, attrs, children }) => {
   const updates = [];
   const $el = document.createElement(tagName);
 
@@ -77,63 +148,102 @@ const renderNode = ({ tagName, attrs, children }) => {
 
   if (children) {
     for (const child of children) {
-      const type = typeof child;
-      if ( type === 'function' ) {
-        let c, $child, $updates;
-        // let $child = createDOMElement(c, $el);
-        const update = () => {
-          const d = child();
-          // console.log({d, c})
-          if (d !== c) {
-            const [ $newChild, $newUpdates ] = createDOMElement(d, $el, $child);
-            $child = $newChild;
-            c = d;
-          }
-          $updates && $updates();
-        };
-        updates.push(update);
-        update();
-        // console.log('SHOULD PUSH!', { updates })
-      } else {
-        const [$newEl, update ] = createDOMElement(child, $el);
-        update && updates.push(update)
-      }
+      const [ element, update ] = renderNode(child);
+      update && updates.push(update);
+      update && update($el);
+      patch($el, element);
     }
   }
-};
-
-const renderNode = ({ tagName, attrs, children }) => {
-  const updates = [];
-  const $el = document.createElement(tagName);
-
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k.match(eventHandler)) {
-      $el[k] = v;
-    } else if (typeof v === 'function') {
-      const update = updateAttr.bind(null, $el, k, v);
-      updates.push(update);
-      update();
-    } else {
-      $el.setAttribute(k, v);
-    }
-  }
-
-  renderNodeChildren($el, children, updates);
 
   const update = () => {
-    // console.log({ updates })
-    updates.forEach( u => u ())
+    updates.forEach(update => update($el))
   };
 
-  return ($parent, $old) => {
-    // update();
-    $old
-    ? $parent.replaceChild($el, $old)
-    : $parent.appendChild($el);
-    // return $el;
-    return [ $el, update ];
-  }
-};
+  return [ $el, update ]
+}
+
+// const resolveNode = (vNode, updates) => {
+//   switch (typeof vNode) {
+//     case 'undefined':
+//     case 'boolean':
+//       return createEmptyNode();
+//     case 'number':
+//     case 'string':
+//       return createTextNode(vNode);
+//     case 'function':
+//       return createExpression(vNode);
+//     default: {
+//       return vNode
+//         ? Array.isArray
+//           ? createFragment(vNode)
+//           : createElement(vNode)
+//         : createEmptyNode();
+//     }
+//   }
+// }
+
+// const renderVNode = ({ tagName, attrs, children }) => {
+//   const $el = document.createElement(tagName);
+// }
+//
+// const renderNode = ({ tagName, attrs, children }) => {
+//   const updates = [];
+//   const $el = document.createElement(tagName);
+//
+//   if (attrs) {
+//     for (const [k, v] of Object.entries(attrs)) {
+//       if (k.match(eventHandler)) {
+//         $el[k] = v;
+//       } else if (typeof v === 'function') {
+//         const update = updateAttr.bind(null, $el, k, v);
+//         updates.push(update);
+//         update();
+//       } else {
+//         $el.setAttribute(k, v);
+//       }
+//     }
+//   }
+//
+//   if (children) {
+//     for (const child of children) {
+//       const type = typeof child;
+//       if ( type === 'function' ) {
+//         let c, $child, $updates;
+//         // let $child = createDOMElement(c, $el);
+//         const update = () => {
+//           const d = child();
+//           // console.log({d, c})
+//           if (d !== c) {
+//             const [ $newChild, $newUpdates ] = createDOMElement(d, $el, $child);
+//             $child = $newChild;
+//             c = d;
+//           }
+//           $updates && $updates();
+//         };
+//         updates.push(update);
+//         update();
+//         // console.log('SHOULD PUSH!', { updates })
+//       } else {
+//         const [$newEl, update ] = createDOMElement(child, $el);
+//         update && updates.push(update);
+//       }
+//     }
+//   }
+//
+//   const update = () => {
+//     // console.log({ updates })
+//     updates.forEach( u => u ())
+//   };
+//
+//   return ($parent, $old) => {
+//     // update();
+//     $old
+//     ? $parent.replaceChild($el, $old)
+//     : $parent.appendChild($el);
+//     // return $el;
+//     return [ $el, update ];
+//   }
+// };
 
 const componentExample = ({ createState } = {}) => {
   // const updateState = createState({ greeting: 'Hello', color: 'white'});
@@ -442,22 +552,17 @@ const example4 = ({ connectStore } = {}) => {
       <p> { () => `Hi, ${$state.name || 'John Doe'}! You have clicked ${$state.count} time${$state.count !== 1 ? 's' : ''} on the ${$state.color} button.` } </p>
       <button style={buttonStyle} onclick={incrementClicks}> Increment! </button>
       <p>
-        { colors.map( color => {
-        console.log(color);
-        var asd = (
-          <label>
+        { colors.map( color => <label>
             <input
               type="radio"
               value={color}
-              name={color}
+              name="color"
               id={color}
               onchange={selectColor}
             />
             { color }
           </label>
-        );
-        return asd;
-      }) }
+        ) }
       </p>
     </div>
   );
@@ -493,9 +598,48 @@ const example4 = ({ connectStore } = {}) => {
   // };
 };
 
+// reactiveArray.map( reactiveItem => <div attr={reactiveItem.attr}>{ reactiveItem.content }</div> )
+
+// const renderMethod = method => function (fn) {
+//     let arrayData;
+//     let cache;
+//     return () => {
+//       const newArrayData = this.arrayProxy();
+//       if (newArrayData !== arrayData) {
+//         cache = method(this.arrayProxy, fn);
+//       }
+//       return cache;
+//   };
+// };
+//
+// const renderMethods = Object.freeze({
+//     map: renderMethod(map),
+//     filter: renderMethod(filter),
+//     reduce: renderMethod(reduce)
+// });
+//
+// const bindRenderMethods = (arrayProxy) => {
+//   Object.create(renderMethods, {
+//     arrayProxy: { value: arrayProxy }
+//   });
+// };
 
 // window.vdom = renderNode(componentExample())(document.body);
-const [ vdom, update ] = renderNode(example4())(document.body);
-subscribe(update);
+const [ vdom, update ] = renderNode(example4());
+patch(document.body, vdom);
+subscribe(update, vdom);
 Object.assign(window, { vdom, update });
 // example4();
+
+//
+// renderNode::(vNode) => {
+//   $el, ...children::map => createDOMElement(child, $el, null)
+//   => ($parent, $old) => [ $el, update ] }
+// createDOMElement::(vNode, $parent, $old) => vNode::string ? $textEl : renderNode(vNode)($parent, $old)
+//
+// bool, num, str => $el
+//
+// vNode => $el -> [...$els]
+// children::map( patch( renderNode( child ) ) )
+// arr
+// fn
