@@ -45,6 +45,7 @@ const createFragment = (vNodes) => {
   const $elements = [];
   const updates = [];
   vNodes.forEach(vNode => {
+    // const [ $el ] = renderNode(vNode);
     const [ $el, update ] = renderNode(vNode);
     $elements.push($el);
     update && updates.push(update);
@@ -79,7 +80,7 @@ const createElement = ({ tagName, attrs, children }) => {
     for (const child of children) {
       const [ element, update ] = renderNode(child);
       update && updates.push(update);
-      update && update($el);
+      // update && update($el);
       patch($el, element);
     }
   }
@@ -99,6 +100,6 @@ const createComponent = ({ tagName: component, attrs, children }) => {
     setTimeout(() => unsubscribe = subscribe(update));
     return [ $state, setState ];
   }
-  const [ $el, update ] = renderNode(component({ attrs, useState }));
+  const [ $el, update ] = renderNode(component({ attrs, children, useState }));
   return [ $el, update, destroy ];
 }

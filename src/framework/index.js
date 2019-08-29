@@ -11,6 +11,7 @@ const h = (tagName, attrs = {}, ...children) => {
 
 const mount = (hdom, $target) => {
   const [ $el, update ] = renderNode(hdom);
+  window.update = update;
   patch($target, $el);
 }
 
