@@ -76,7 +76,7 @@ const createProxy = (record, { handler, mutable = false, env = {}} = {}) => {
 			state = stateGuard(record, { mutable });
   const isArray = Array.isArray(record);
   const { message, subscribe } = createObservable();
-  handler && subscribe(handler);
+  const unsubscribe = handler && subscribe(handler);
 	// handler && console.log({ handler })
 	const defineMutatorFn = isArray && mutable
 		? (len, prop) => ({
