@@ -49,8 +49,6 @@ const Example4 = ({ attrs, useState, useEffect, computed } = {}) => {
     border: `5px solid ${state.color}`
   });
 
-  var colors = ['red', 'orange', 'green', 'purple', 'black'];
-
   console.log("Rendering <Example4 />")
 
   return (
@@ -77,7 +75,7 @@ const Example4 = ({ attrs, useState, useEffect, computed } = {}) => {
       </p>
       <p>
         { $and(() => state.showColors,
-          colors.map( color => <label>
+          attrs.colors.map( color => <label>
             <input
               type="radio"
               value={color}
@@ -101,6 +99,7 @@ const Example4 = ({ attrs, useState, useEffect, computed } = {}) => {
 // }
 
 console.time()
-mount(<Wrapper><Example4 /></Wrapper>, document.body);
+
+mount(<Wrapper><Example4 colors={['red', 'orange', 'green', 'purple', 'black']} /></Wrapper>, document.body);
 // mount(<Test />, document.body);
 console.timeEnd()
