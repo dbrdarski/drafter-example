@@ -29,20 +29,20 @@ const UxInput = ({
   );
 };
 
-const TimerState = ({ useValue, useComputed }) => {
-  const [ counter, setCounter ] = useValue(1);
+const Timer = ({ useValue, useComputed }) => {
+  const [ counter, setCounter ] = useValue(0);
+  const increment = () => { setCounter(v => v + 1) };
+  const counterDisplay = useComputed({ counter }, ({ counter }) => {
+    const reversed = String(counter).split('').reverse().join('');
+    const sum = counter + Number(reversed);
+    return `${counter} | ${sum} | ${reversed}`;
+  });
 
-  const dottedCounter = useComputed(
-    { counter },
-    ({ counter }) => `${counter}.${counter}`
-  );
-
-  const increment = () => {
-    setCounter(v => v + 1)
-  };
   setInterval(increment, 1000);
+  console.log("Rendering <Timer />")
+
   return (
-    <h3>Counter: { dottedCounter }</h3>
+    <h2>{ counterDisplay }</h2>
   );
 };
 
@@ -121,7 +121,7 @@ console.time()
 
 mount(<Wrapper>
   <Example4 colors={['red', 'orange', 'green', 'purple', 'black']} />
-  <TimerState />
+  <Timer />
 </Wrapper>, document.body);
 // mount(<Test />, document.body);
 console.timeEnd()

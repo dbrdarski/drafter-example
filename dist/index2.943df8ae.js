@@ -1321,21 +1321,14 @@ var UxInput = function UxInput(_ref2) {
   }));
 };
 
-var TimerState = function TimerState(_ref3) {
+var Timer = function Timer(_ref3) {
   var useValue = _ref3.useValue,
       useComputed = _ref3.useComputed;
 
-  var _useValue = useValue(1),
+  var _useValue = useValue(0),
       _useValue2 = _slicedToArray(_useValue, 2),
       counter = _useValue2[0],
       setCounter = _useValue2[1];
-
-  var dottedCounter = useComputed({
-    counter: counter
-  }, function (_ref4) {
-    var counter = _ref4.counter;
-    return "".concat(counter, ".").concat(counter);
-  });
 
   var increment = function increment() {
     setCounter(function (v) {
@@ -1343,8 +1336,17 @@ var TimerState = function TimerState(_ref3) {
     });
   };
 
+  var counterDisplay = useComputed({
+    counter: counter
+  }, function (_ref4) {
+    var counter = _ref4.counter;
+    var reversed = String(counter).split('').reverse().join('');
+    var sum = counter + Number(reversed);
+    return "".concat(counter, " | ").concat(sum, " | ").concat(reversed);
+  });
   setInterval(increment, 1000);
-  return (0, _framework.h)("h3", null, "Counter: ", dottedCounter);
+  console.log("Rendering <Timer />");
+  return (0, _framework.h)("h2", null, counterDisplay);
 };
 
 var Example4 = function Example4() {
@@ -1440,7 +1442,7 @@ var Example4 = function Example4() {
 console.time();
 (0, _framework.mount)((0, _framework.h)(Wrapper, null, (0, _framework.h)(Example4, {
   colors: ['red', 'orange', 'green', 'purple', 'black']
-}), (0, _framework.h)(TimerState, null)), document.body); // mount(<Test />, document.body);
+}), (0, _framework.h)(Timer, null)), document.body); // mount(<Test />, document.body);
 
 console.timeEnd();
 },{"./framework":"src/framework/index.js"}],"C:/Users/dane/AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
@@ -1471,7 +1473,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "59067" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "63961" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
