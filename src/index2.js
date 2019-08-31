@@ -29,6 +29,23 @@ const UxInput = ({
   );
 };
 
+const TimerState = ({ useValue, useComputed }) => {
+  const [ counter, setCounter ] = useValue(1);
+
+  const dottedCounter = useComputed(
+    { counter },
+    ({ counter }) => `${counter}.${counter}`
+  );
+
+  const increment = () => {
+    setCounter(v => v + 1)
+  };
+  setInterval(increment, 1000);
+  return (
+    <h3>Counter: { dottedCounter }</h3>
+  );
+};
+
 const Example4 = ({ attrs, useState, useEffect, computed } = {}) => {
 
   const [ state, updateState ] = useState({
@@ -37,6 +54,8 @@ const Example4 = ({ attrs, useState, useEffect, computed } = {}) => {
     color: 'green',
     showColors: true
   });
+
+  window.state = state;
 
   const toggleColorOptions = (e) => state.showColors = e.target.checked;
   const incrementClicks = () => state.count++;
@@ -100,6 +119,9 @@ const Example4 = ({ attrs, useState, useEffect, computed } = {}) => {
 
 console.time()
 
-mount(<Wrapper><Example4 colors={['red', 'orange', 'green', 'purple', 'black']} /></Wrapper>, document.body);
+mount(<Wrapper>
+  <Example4 colors={['red', 'orange', 'green', 'purple', 'black']} />
+  <TimerState />
+</Wrapper>, document.body);
 // mount(<Test />, document.body);
 console.timeEnd()

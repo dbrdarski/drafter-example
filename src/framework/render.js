@@ -1,5 +1,6 @@
 import { patch } from './patch';
-import { createState } from './state';
+// import { createValue, createState, createComputed } from './state';
+import { useValue, useState, useComputed } from './hooks';
 import { eventHandler, updateAttr } from './attrs';
 
 export const renderNode = (vNode) => {
@@ -93,13 +94,17 @@ const createElement = ({ tagName, attrs, children }) => {
 }
 
 const createComponent = ({ tagName: component, attrs, children }) => {
-  let unsubscribe;
-  const destroy = () => unsubscribe && unsubscribe();
-  const useState = (state) => {
-    const { $state, setState, subscribe } =  createState(state);
-    setTimeout(() => unsubscribe = subscribe(update));
-    return [ $state, setState ];
-  }
-  const [ $el, update ] = renderNode(component({ attrs, children, useState }));
+  let destroy;
+  const connectState = (subscribe) => setTimeout(() => destroy = subscribe(update));
+  const [ $el, update ] = renderNode(component({
+    attrs,
+    children,
+    useComputed: useComputed.bind(connectState),
+    // useValue: hook.bind(connectState, createValue),
+    // useState: hook.bind(connectState, createState)
+    useValue: useValue.bind(connectState),
+    useState: useState.bind(connectState)
+  }));
+
   return [ $el, update, destroy ];
 }

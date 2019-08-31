@@ -10,27 +10,57 @@ const map = (arr, fn) => {
   };
 };
 
-const lift = (v, args) => typeof v === 'function' ? v.apply(null, args) : v;
-export const $and = (x, y) => (...args) => lift(x, args) && lift(y, args);
-export const $or = (x, y) => (...args) => lift(x, args) || lift(y, args);
-export const $if = (x, y, z) => (...args) => lift(x, args) ? lift(y, args) : lift(z, args);
-export const $add = (x, y) => () => lift(x) + lift(y);
-export const $sub = (x, y) => () => lift(x) - lift(y);
-export const $multiply = (x, y) => () => lift(x) * lift(y);
-export const $divide = (x, y) => () => lift(x) / lift(y);
-export const $pow = (x, y) => () => lift(x) ** lift(y);
-export const $mod = (x, y) => () => lift(x) % lift(y);
+export const flatten = (v, args) => typeof v === 'function' ? v.apply(null, args) : v;
+const flat = (fn) => (...args) => {
+  return args.any(arg => typeof argument === 'function')
+    ? () => fn(...args.map(flatten))
+    : fn(...args)
+}
+
+export const $not = (x) => typeof x === 'function'
+  ? (...args) => !flatten(x, args)
+  : !x;
+export const $and = (cond, x) => typeof cond === 'function'
+  ? (...args) => cond() && flatten(x, args)
+  : cond && x;
+export const $or = (cond, x) => typeof cond === 'function'
+  ? (...args) => cond() || flatten(x, args)
+  : cond || x;
+export const $if = (cond, x, y) => typeof cond === 'function'
+  ? (...args) => cond() ? flatten(x, args) : flatten(y, args)
+  : cond ? x : y;
+
+export const $eq = flat((x, y) => x === y);
+export const $eqw = flat((x, y) => x == y);
+
+export const $add = flat((x, y) => x + y);
+export const $sub = flat((x, y) => x - y);
+export const $multiply = flat((x, y) => x * y);
+export const $divide = flat((x, y) => x / y);
+export const $pow = flat((x, y) => x ** y);
+export const $mod = flat((x, y) => x % y);
+export const $lt = flat((x, y) => x < y);
+export const $gt = flat((x, y) => x > y);
+export const $lte = flat((x, y) => x <= y);
+export const $gte = flat((x, y) => x >= y);
+
+// export const $add = (x, y) => () => flatten(x) + flatten(y);
+// export const $sub = (x, y) => () => flatten(x) - flatten(y);
+// export const $multiply = (x, y) => () => flatten(x) * flatten(y);
+// export const $divide = (x, y) => () => flatten(x) / flatten(y);
+// export const $pow = (x, y) => () => flatten(x) ** flatten(y);
+// export const $mod = (x, y) => () => flatten(x) % flatten(y);
 
 // const $if2 = (x, y, z) => {
 //   let cache1, cache2, result;
 //   returnf (...args) => {
-//     const condition = lift(x, args);
+//     const condition = flatten(x, args);
 //     if (condition) {
-//       result = lift(y, args);
+//       result = flatten(y, args);
 //       if result !== void 0;
 //         cache1 = result;
 //     } else {
-//       result = lift(z, args);
+//       result = flatten(z, args);
 //       if result !== void 0;
 //         cache2 = result;
 //     }
@@ -41,8 +71,8 @@ export const $mod = (x, y) => () => lift(x) % lift(y);
 // const $if3 = (condition, ...outcomes) => {
 //   let result, cache = [];
 //   return (...args) => {
-//     const outcome = Number(!lift(x, args));
-//     result = lift(outcomes[outcome], args);
+//     const outcome = Number(!flatten(x, args));
+//     result = flatten(outcomes[outcome], args);
 //     if (result !== void 0) {
 //       cache[outcome] = result;
 //     }
@@ -53,14 +83,14 @@ export const $mod = (x, y) => () => lift(x) % lift(y);
 // const $if4 = (condition, ...outcomes) => {
 //   let result, cache = [];
 //   return (...args) => {
-//     const outcome = Number(!lift(x, args));
+//     const outcome = Number(!flatten(x, args));
 //     result = outcomes[outcome];
 //     cache[outcome] = result;
-//     return lift(result, args);
+//     return flatten(result, args);
 //   };
 // };
 
-// const $if = (condition, x, y) => (...args) => lift(lift(condition ? x : y, args));
+// const $if = (condition, x, y) => (...args) => flatten(flatten(condition ? x : y, args));
 
 
 // $if(false, 1, $if(2, 3, 4));
@@ -71,7 +101,7 @@ export const $mod = (x, y) => () => lift(x) % lift(y);
 //   <Component2 user={ user } />
 // ) }
 //
-// { (...args) => lift(state.someCondition, args)
+// { (...args) => flatten(state.someCondition, args)
 //   ?  <div>No data found.</div>
 //   : <Component2 user={ user } />
 // }

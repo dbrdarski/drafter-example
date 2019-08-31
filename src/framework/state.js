@@ -4,10 +4,40 @@
 
 const { isPrimitive, isObject, isCallable, copy, map, empty, each } = require('./utils');
 const { createObservable } = require('./observable');
+const { flatten } = require('./extras')
 
 const ERR_STATE_UPDATE = 'State update argument must either be an Object/Array or an update function.';
 
 const stateDefaults = { mutable: false, };
+
+const createValue = (value) => {
+	const { message, subscribe } = createObservable();
+	const $state = () => value;
+	const setState = (v) => {
+		if (typeof v === 'function') {
+			v = v(value);
+		}
+		if (value !== v) {
+			value = v;
+			message(v);
+		}
+	};
+	return {
+		$state,
+		setState,
+		subscribe
+	};
+};
+
+const createComputed = (deps, computedFn) => {
+	const { message, subscribe } = createObservable();
+	const $state = () => computedFn(map(deps, (x) => flatten(x)));
+	// const $state = () => 1;
+	return {
+		$state,
+		subscribe
+	}
+};
 
 const createState = (state = {}, options) => {
 	const { mutable, env } = Object.assign({}, stateDefaults, options);
@@ -169,7 +199,9 @@ const createProxy = (record, { handler, mutable = false, env = {}} = {}) => {
 
 module.exports = {
   produce,
+	createValue,
 	createState,
+	createComputed,
 	createProxy,
 	stateGuard,
 	subProxy
