@@ -5,6 +5,7 @@
 const { isPrimitive, isObject, isCallable, copy, map, empty, each } = require('./utils');
 const { createObservable } = require('./observable');
 const { flatten } = require('./extras')
+const { env } = require('./env')
 
 const ERR_STATE_UPDATE = 'State update argument must either be an Object/Array or an update function.';
 
@@ -14,6 +15,9 @@ const createValue = (value) => {
 	const { message, subscribe } = createObservable();
 	const $state = () => value;
 	const setState = (v) => {
+		// if (env.renderInProgress) {
+		// 	env.register(subscribe(env.renderTarget));
+		// }
 		if (typeof v === 'function') {
 			v = v(value);
 		}
@@ -30,9 +34,8 @@ const createValue = (value) => {
 };
 
 const createComputed = (deps, computedFn) => {
-	const { message, subscribe } = createObservable();
+	const { subscribe } = createObservable();
 	const $state = () => computedFn(map(deps, (x) => flatten(x)));
-	// const $state = () => 1;
 	return {
 		$state,
 		subscribe

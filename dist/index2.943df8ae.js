@@ -538,6 +538,19 @@ var $gte = flat(function (x, y) {
 // };
 
 exports.$gte = $gte;
+},{}],"src/framework/env.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.env = void 0;
+var env = {
+  register: function register(destroyFn) {
+    this.renderTargetUnsubscribe.push(destroyFn);
+  }
+};
+exports.env = env;
 },{}],"src/framework/state.js":[function(require,module,exports) {
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
 
@@ -565,6 +578,9 @@ var _require2 = require('./observable'),
 var _require3 = require('./extras'),
     flatten = _require3.flatten;
 
+var _require4 = require('./env'),
+    env = _require4.env;
+
 var ERR_STATE_UPDATE = 'State update argument must either be an Object/Array or an update function.';
 var stateDefaults = {
   mutable: false
@@ -580,6 +596,9 @@ var createValue = function createValue(value) {
   };
 
   var setState = function setState(v) {
+    // if (env.renderInProgress) {
+    // 	env.register(subscribe(env.renderTarget));
+    // }
     if (typeof v === 'function') {
       v = v(value);
     }
@@ -599,15 +618,13 @@ var createValue = function createValue(value) {
 
 var createComputed = function createComputed(deps, computedFn) {
   var _createObservable2 = createObservable(),
-      message = _createObservable2.message,
       subscribe = _createObservable2.subscribe;
 
   var $state = function $state() {
     return computedFn(map(deps, function (x) {
       return flatten(x);
     }));
-  }; // const $state = () => 1;
-
+  };
 
   return {
     $state: $state,
@@ -858,7 +875,7 @@ module.exports = {
   stateGuard: stateGuard,
   subProxy: subProxy
 };
-},{"./utils":"src/framework/utils.js","./observable":"src/framework/observable.js","./extras":"src/framework/extras.js"}],"src/framework/patch.js":[function(require,module,exports) {
+},{"./utils":"src/framework/utils.js","./observable":"src/framework/observable.js","./extras":"src/framework/extras.js","./env":"src/framework/env.js"}],"src/framework/patch.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -921,6 +938,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.useComputed = useComputed;
 exports.useValue = useValue;
 exports.useState = useState;
+exports.useEffect = useEffect;
 
 var _state = require("./state");
 
@@ -958,6 +976,8 @@ function useState(state) {
   this(subscribe);
   return [$state, setState];
 }
+
+function useEffect(deps, effectFn) {}
 },{"./state":"src/framework/state.js"}],"src/framework/attrs.js":[function(require,module,exports) {
 "use strict";
 
@@ -1176,11 +1196,17 @@ var createComponent = function createComponent(_ref2) {
   var component = _ref2.tagName,
       attrs = _ref2.attrs,
       children = _ref2.children;
-  var destroy;
+  var unsubscribeList = [];
+
+  var destroy = function destroy() {
+    unsubscribeList.forEach(function (d) {
+      return d();
+    });
+  };
 
   var connectState = function connectState(subscribe) {
     return setTimeout(function () {
-      return destroy = subscribe(update);
+      return unsubscribeList.push(subscribe(update));
     });
   };
 
@@ -1349,12 +1375,11 @@ var Timer = function Timer(_ref3) {
   return (0, _framework.h)("h2", null, counterDisplay);
 };
 
-var Example4 = function Example4() {
+var Main = function Main() {
   var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
       attrs = _ref5.attrs,
       useState = _ref5.useState,
-      useEffect = _ref5.useEffect,
-      computed = _ref5.computed;
+      useEffect = _ref5.useEffect;
 
   var _useState = useState({
     name: '',
@@ -1366,7 +1391,14 @@ var Example4 = function Example4() {
       state = _useState2[0],
       updateState = _useState2[1];
 
-  window.state = state;
+  window.state = state; // useEffect({
+  //   counter
+  // }, ({
+  //   counter
+  // }) => {
+  //   document.title = `You clicked ${counter} times`;
+  // });
+  //
 
   var toggleColorOptions = function toggleColorOptions(e) {
     return state.showColors = e.target.checked;
@@ -1392,7 +1424,7 @@ var Example4 = function Example4() {
     };
   };
 
-  console.log("Rendering <Example4 />");
+  console.log("Rendering <Main />");
   return (0, _framework.h)("div", null, (0, _framework.h)(UxInput, {
     type: "text",
     name: "name",
@@ -1440,7 +1472,7 @@ var Example4 = function Example4() {
 
 
 console.time();
-(0, _framework.mount)((0, _framework.h)(Wrapper, null, (0, _framework.h)(Example4, {
+(0, _framework.mount)((0, _framework.h)(Wrapper, null, (0, _framework.h)(Main, {
   colors: ['red', 'orange', 'green', 'purple', 'black']
 }), (0, _framework.h)(Timer, null)), document.body); // mount(<Test />, document.body);
 
@@ -1473,7 +1505,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "63961" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "60708" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

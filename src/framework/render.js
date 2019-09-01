@@ -94,8 +94,11 @@ const createElement = ({ tagName, attrs, children }) => {
 }
 
 const createComponent = ({ tagName: component, attrs, children }) => {
-  let destroy;
-  const connectState = (subscribe) => setTimeout(() => destroy = subscribe(update));
+  const unsubscribeList = [];
+  const destroy = () => {
+    unsubscribeList.forEach( d => d());
+  };
+  const connectState = (subscribe) => setTimeout(() => unsubscribeList.push(subscribe(update)));
   const [ $el, update ] = renderNode(component({
     attrs,
     children,

@@ -46,7 +46,7 @@ const Timer = ({ useValue, useComputed }) => {
   );
 };
 
-const Example4 = ({ attrs, useState, useEffect, computed } = {}) => {
+const Main = ({ attrs, useState, useEffect } = {}) => {
 
   const [ state, updateState ] = useState({
     name: '',
@@ -57,6 +57,14 @@ const Example4 = ({ attrs, useState, useEffect, computed } = {}) => {
 
   window.state = state;
 
+  // useEffect({
+  //   counter
+  // }, ({
+  //   counter
+  // }) => {
+  //   document.title = `You clicked ${counter} times`;
+  // });
+  //
   const toggleColorOptions = (e) => state.showColors = e.target.checked;
   const incrementClicks = () => state.count++;
   const updateName = (e) => state.name = e.target.value;
@@ -68,7 +76,7 @@ const Example4 = ({ attrs, useState, useEffect, computed } = {}) => {
     border: `5px solid ${state.color}`
   });
 
-  console.log("Rendering <Example4 />")
+  console.log("Rendering <Main />")
 
   return (
     <div>
@@ -120,7 +128,7 @@ const Example4 = ({ attrs, useState, useEffect, computed } = {}) => {
 console.time()
 
 mount(<Wrapper>
-  <Example4 colors={['red', 'orange', 'green', 'purple', 'black']} />
+  <Main colors={['red', 'orange', 'green', 'purple', 'black']} />
   <Timer />
 </Wrapper>, document.body);
 // mount(<Test />, document.body);

@@ -24,3 +24,7 @@ export function useState(state) {
   this(subscribe);
   return [ $state, setState ];
 }
+
+export function useEffect(deps, effectFn) {
+
+}
