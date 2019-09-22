@@ -1,7 +1,10 @@
 export const eventHandler = /^on[\w]+/g;
 
-export const updateAttr = ($el, k, condition) => {
-  const v = condition();
+export const updateAttr = ($el, k, value) => {
+  if (k === 'ref') {
+    return void value($el);
+  }
+  const v = value();
   if (v == null) {
     $el.removeAttribute(k);
   } else {

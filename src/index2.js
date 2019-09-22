@@ -10,7 +10,7 @@ const Wrapper = ({ children }) => {
 }
 
 const UxInput = ({
-  attrs: { name, label, placeholder, type, value, oninput }
+  attrs: { name, label, placeholder, type, ...rest }
 }) => {
   console.log("Rendering <UxInput! />")
   return (
@@ -22,14 +22,13 @@ const UxInput = ({
         placeholder={placeholder || ''}
         name={name}
         id={name}
-        value={value}
-        oninput={oninput}
+        {...rest}
       />
     </div>
   );
 };
 
-const Timer = ({ useValue, useComputed }) => {
+const Timer = ({ useValue, useComputed, useEffect }) => {
   const [ counter, setCounter ] = useValue(0);
   const increment = () => { setCounter(v => v + 1) };
   const counterDisplay = useComputed({ counter }, ({ counter }) => {
@@ -38,7 +37,21 @@ const Timer = ({ useValue, useComputed }) => {
     return `${counter} | ${sum} | ${reversed}`;
   });
 
-  setInterval(increment, 1000);
+  const interval = setInterval(increment, 1000);
+
+  useEffect({ counter }, ({ counter }) => {
+    document.title = `You clicked ${counter} times`;
+  })
+
+  useEffect(false, () => {
+    console.log('START!!!')
+    return () => {
+      console.log('END!!!!')
+      document.title = 'Thank you for using Ryan Air!'
+      clearInterval(interval);
+    }
+  });
+
   console.log("Rendering <Timer />")
 
   return (
@@ -46,8 +59,9 @@ const Timer = ({ useValue, useComputed }) => {
   );
 };
 
-const Main = ({ attrs, useState, useEffect } = {}) => {
-
+const Main = ({ attrs, useState, useEffect, useRef } = {}) => {
+  const inputRef = useRef();
+  console.log({ inputRef })
   const [ state, updateState ] = useState({
     name: '',
     count: 0,
@@ -66,7 +80,10 @@ const Main = ({ attrs, useState, useEffect } = {}) => {
   // });
   //
   const toggleColorOptions = (e) => state.showColors = e.target.checked;
-  const incrementClicks = () => state.count++;
+  const incrementClicks = () => {
+    inputRef().focus();
+    state.count++;
+  };
   const updateName = (e) => state.name = e.target.value;
   const selectColor = (e) => state.color = e.target.value;
 
@@ -83,6 +100,7 @@ const Main = ({ attrs, useState, useEffect } = {}) => {
       <UxInput
         type="text"
         name="name"
+        ref={inputRef}
         label="Your name"
         value={() => state.name}
         oninput={updateName}
@@ -101,7 +119,7 @@ const Main = ({ attrs, useState, useEffect } = {}) => {
         </label>
       </p>
       <p>
-        { $and(() => state.showColors,
+        { $if(() => state.showColors,
           attrs.colors.map( color => <label>
             <input
               type="radio"
@@ -113,7 +131,7 @@ const Main = ({ attrs, useState, useEffect } = {}) => {
             />
             { color }
           </label>
-        )) }
+        ), <Timer />) }
       </p>
     </div>
   );
@@ -129,7 +147,6 @@ console.time()
 
 mount(<Wrapper>
   <Main colors={['red', 'orange', 'green', 'purple', 'black']} />
-  <Timer />
 </Wrapper>, document.body);
 // mount(<Test />, document.body);
 console.timeEnd()

@@ -1,7 +1,8 @@
 import { env } from './env';
 import { patch } from './patch';
 // import { createValue, createState, createComputed } from './state';
-import { useValue, useState, useComputed } from './hooks';
+import { createObservable } from './observable';
+import { useEffect, useValue, useState, useComputed, useRef } from './hooks';
 import { eventHandler, updateAttr } from './attrs';
 
 export const renderNode = (vNode) => {
@@ -25,13 +26,17 @@ const createEmptyNode = () => [ document.createTextNode(''), false ]
 const createTextNode = (text) => [ document.createTextNode(text), false ];
 
 const createExpression = (fn) => {
-  let resultCache, elementCache, updatesCache;
+  let resultCache, elementCache, updatesCache, destroyCache;
+  const destroy = () => {
+    destroyCache && destroyCache();
+  };
   const update = ($parent) => {
     const result = fn();
 
     if (result !== resultCache) {
-      const [ element, updates ] = renderNode(result);
-
+      const [ element, updates, destroyUpdate ] = renderNode(result);
+      destroy();
+      destroyCache = destroyUpdate;
       $parent && patch($parent, element, elementCache);
       elementCache = element;
       resultCache = result;
@@ -40,28 +45,36 @@ const createExpression = (fn) => {
     updatesCache && updatesCache();
   };
   update();
-  return [ elementCache, update ];
+  return [ elementCache, update, destroy ];
 };
 
 const createFragment = (vNodes) => {
   const $elements = [];
   const updates = [];
+  const destroyHandlers = [];
   vNodes.forEach(vNode => {
     // const [ $el ] = renderNode(vNode);
-    const [ $el, update ] = renderNode(vNode);
+    const [ $el, update, destroy ] = renderNode(vNode);
     $elements.push($el);
     update && updates.push(update);
+    destroy && destroyHandlers.push(destroy);
   });
 
   const update = ($parent) => {
     updates.forEach(update => update($parent));
   }
 
-  return [ $elements, update ];
+  const destroy = () => {
+    updates.forEach(fn => fn());
+  }
+
+  return [ $elements, update, destroy ];
 }
 
 const createElement = ({ tagName, attrs, children }) => {
   const updates = [];
+  const destroyHandlers = [];
+
   const $el = document.createElement(tagName);
 
   if (attrs) {
@@ -80,8 +93,9 @@ const createElement = ({ tagName, attrs, children }) => {
 
   if (children) {
     for (const child of children) {
-      const [ element, update ] = renderNode(child);
+      const [ element, update, destroyHandler ] = renderNode(child);
       update && updates.push(update);
+      destroyHandler && destroyHandlers.push(destroyHandler);
       // update && update($el);
       patch($el, element);
     }
@@ -91,23 +105,42 @@ const createElement = ({ tagName, attrs, children }) => {
     updates.forEach(update => update($el))
   };
 
-  return [ $el, update ];
+  const destroy = () => {
+    destroyHandlers.forEach(fn => fn())
+  };
+
+  return [ $el, update, destroy ];
 }
 
 const createComponent = ({ tagName: component, attrs, children }) => {
   const unsubscribeList = [];
+  const updateObservable = createObservable();
+  const destroyObservable = createObservable();
+
   const destroy = () => {
     unsubscribeList.forEach( d => d());
+    destroyObservable.message();
   };
+
+  const update = (...args) => {
+    updateDom(...args);
+    updateObservable.message();
+  }
+
   const connectState = (subscribe) => setTimeout(() => unsubscribeList.push(subscribe(update)));
-  const [ $el, update ] = renderNode(component({
+  const [ $el, updateDom ] = renderNode(component({
     attrs,
     children,
+    useEffect: useEffect.bind({
+      subscribeToUpdates: updateObservable.subscribe,
+      subscribeToDestroy: destroyObservable.subscribe
+    }),
     useComputed: useComputed.bind(connectState),
     // useValue: hook.bind(connectState, createValue),
     // useState: hook.bind(connectState, createState)
     useValue: useValue.bind(connectState),
-    useState: useState.bind(connectState)
+    useState: useState.bind(connectState),
+    useRef
   }));
 
   return [ $el, update, destroy ];

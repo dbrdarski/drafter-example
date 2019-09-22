@@ -268,13 +268,31 @@ var createObservable = function createObservable() {
   var message = function message(msg) {
     if (dirty) {
       var newObserverList = [];
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
 
-      for (var _i = 0, _observers = observers; _i < _observers.length; _i++) {
-        observers = _observers[_i];
+      try {
+        for (var _iterator = observers[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          observers = _step.value;
 
-        if (observer) {
-          observer.fn(msg);
-          observer.update(newObserverList);
+          if (observer) {
+            observer.fn(msg);
+            observer.update(newObserverList);
+          }
+        }
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return != null) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
         }
       }
 
@@ -556,7 +574,7 @@ function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArra
 
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
 
-function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
@@ -613,6 +631,27 @@ var createValue = function createValue(value) {
     $state: $state,
     setState: setState,
     subscribe: subscribe
+  };
+};
+
+var createEffect = function createEffect(deps, effectFn) {
+  var destroy, depsCache;
+
+  var destroyEffect = function destroyEffect() {
+    destroy && destroy(depsCache);
+  };
+
+  var runEffect = function runEffect() {
+    destroyEffect();
+    depsCache = map(deps, function (x) {
+      return flatten(x);
+    });
+    destroy = effectFn(depsCache);
+  };
+
+  return {
+    runEffect: runEffect,
+    destroyEffect: destroyEffect
   };
 };
 
@@ -868,6 +907,7 @@ var createProxy = function createProxy(record) {
 
 module.exports = {
   produce: produce,
+  createEffect: createEffect,
   createValue: createValue,
   createState: createState,
   createComputed: createComputed,
@@ -939,6 +979,7 @@ exports.useComputed = useComputed;
 exports.useValue = useValue;
 exports.useState = useState;
 exports.useEffect = useEffect;
+exports.useRef = useRef;
 
 var _state = require("./state");
 
@@ -977,7 +1018,29 @@ function useState(state) {
   return [$state, setState];
 }
 
-function useEffect(deps, effectFn) {}
+function useEffect(deps, effectFn) {
+  var _createEffect = (0, _state.createEffect)(deps, effectFn),
+      runEffect = _createEffect.runEffect,
+      destroyEffect = _createEffect.destroyEffect;
+
+  deps ? this.subscribeToUpdates(runEffect) : setTimeout(runEffect);
+  this.subscribeToDestroy(destroyEffect);
+}
+
+function useRef(value) {
+  return function () {
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    if (args.length) {
+      var update = args[0];
+      value = update;
+    }
+
+    return value;
+  };
+}
 },{"./state":"src/framework/state.js"}],"src/framework/attrs.js":[function(require,module,exports) {
 "use strict";
 
@@ -988,8 +1051,12 @@ exports.updateAttr = exports.eventHandler = void 0;
 var eventHandler = /^on[\w]+/g;
 exports.eventHandler = eventHandler;
 
-var updateAttr = function updateAttr($el, k, condition) {
-  var v = condition();
+var updateAttr = function updateAttr($el, k, value) {
+  if (k === 'ref') {
+    return void value($el);
+  }
+
+  var v = value();
 
   if (v == null) {
     $el.removeAttribute(k);
@@ -1030,7 +1097,11 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.renderNode = void 0;
 
+var _env = require("./env");
+
 var _patch = require("./patch");
+
+var _observable = require("./observable");
 
 var _hooks = require("./hooks");
 
@@ -1040,7 +1111,7 @@ function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArra
 
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
 
-function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
@@ -1075,17 +1146,24 @@ var createTextNode = function createTextNode(text) {
 };
 
 var createExpression = function createExpression(fn) {
-  var resultCache, elementCache, updatesCache;
+  var resultCache, elementCache, updatesCache, destroyCache;
+
+  var destroy = function destroy() {
+    destroyCache && destroyCache();
+  };
 
   var update = function update($parent) {
     var result = fn();
 
     if (result !== resultCache) {
       var _renderNode = renderNode(result),
-          _renderNode2 = _slicedToArray(_renderNode, 2),
+          _renderNode2 = _slicedToArray(_renderNode, 3),
           element = _renderNode2[0],
-          updates = _renderNode2[1];
+          updates = _renderNode2[1],
+          destroyUpdate = _renderNode2[2];
 
+      destroy();
+      destroyCache = destroyUpdate;
       $parent && (0, _patch.patch)($parent, element, elementCache);
       elementCache = element;
       resultCache = result;
@@ -1096,21 +1174,24 @@ var createExpression = function createExpression(fn) {
   };
 
   update();
-  return [elementCache, update];
+  return [elementCache, update, destroy];
 };
 
 var createFragment = function createFragment(vNodes) {
   var $elements = [];
   var updates = [];
+  var destroyHandlers = [];
   vNodes.forEach(function (vNode) {
     // const [ $el ] = renderNode(vNode);
     var _renderNode3 = renderNode(vNode),
-        _renderNode4 = _slicedToArray(_renderNode3, 2),
+        _renderNode4 = _slicedToArray(_renderNode3, 3),
         $el = _renderNode4[0],
-        update = _renderNode4[1];
+        update = _renderNode4[1],
+        destroy = _renderNode4[2];
 
     $elements.push($el);
     update && updates.push(update);
+    destroy && destroyHandlers.push(destroy);
   });
 
   var update = function update($parent) {
@@ -1119,7 +1200,13 @@ var createFragment = function createFragment(vNodes) {
     });
   };
 
-  return [$elements, update];
+  var destroy = function destroy() {
+    updates.forEach(function (fn) {
+      return fn();
+    });
+  };
+
+  return [$elements, update, destroy];
 };
 
 var createElement = function createElement(_ref) {
@@ -1127,6 +1214,7 @@ var createElement = function createElement(_ref) {
       attrs = _ref.attrs,
       children = _ref.children;
   var updates = [];
+  var destroyHandlers = [];
   var $el = document.createElement(tagName);
 
   if (attrs) {
@@ -1159,11 +1247,13 @@ var createElement = function createElement(_ref) {
         var child = _step.value;
 
         var _renderNode5 = renderNode(child),
-            _renderNode6 = _slicedToArray(_renderNode5, 2),
+            _renderNode6 = _slicedToArray(_renderNode5, 3),
             element = _renderNode6[0],
-            _update2 = _renderNode6[1];
+            _update2 = _renderNode6[1],
+            destroyHandler = _renderNode6[2];
 
-        _update2 && updates.push(_update2); // update && update($el);
+        _update2 && updates.push(_update2);
+        destroyHandler && destroyHandlers.push(destroyHandler); // update && update($el);
 
         (0, _patch.patch)($el, element);
       }
@@ -1189,7 +1279,13 @@ var createElement = function createElement(_ref) {
     });
   };
 
-  return [$el, update];
+  var destroy = function destroy() {
+    destroyHandlers.forEach(function (fn) {
+      return fn();
+    });
+  };
+
+  return [$el, update, destroy];
 };
 
 var createComponent = function createComponent(_ref2) {
@@ -1197,11 +1293,19 @@ var createComponent = function createComponent(_ref2) {
       attrs = _ref2.attrs,
       children = _ref2.children;
   var unsubscribeList = [];
+  var updateObservable = (0, _observable.createObservable)();
+  var destroyObservable = (0, _observable.createObservable)();
 
   var destroy = function destroy() {
     unsubscribeList.forEach(function (d) {
       return d();
     });
+    destroyObservable.message();
+  };
+
+  var update = function update() {
+    updateDom.apply(void 0, arguments);
+    updateObservable.message();
   };
 
   var connectState = function connectState(subscribe) {
@@ -1213,19 +1317,24 @@ var createComponent = function createComponent(_ref2) {
   var _renderNode7 = renderNode(component({
     attrs: attrs,
     children: children,
+    useEffect: _hooks.useEffect.bind({
+      subscribeToUpdates: updateObservable.subscribe,
+      subscribeToDestroy: destroyObservable.subscribe
+    }),
     useComputed: _hooks.useComputed.bind(connectState),
     // useValue: hook.bind(connectState, createValue),
     // useState: hook.bind(connectState, createState)
     useValue: _hooks.useValue.bind(connectState),
-    useState: _hooks.useState.bind(connectState)
+    useState: _hooks.useState.bind(connectState),
+    useRef: _hooks.useRef
   })),
       _renderNode8 = _slicedToArray(_renderNode7, 2),
       $el = _renderNode8[0],
-      update = _renderNode8[1];
+      updateDom = _renderNode8[1];
 
   return [$el, update, destroy];
 };
-},{"./patch":"src/framework/patch.js","./hooks":"src/framework/hooks.js","./attrs":"src/framework/attrs.js"}],"src/framework/index.js":[function(require,module,exports) {
+},{"./env":"src/framework/env.js","./patch":"src/framework/patch.js","./observable":"src/framework/observable.js","./hooks":"src/framework/hooks.js","./attrs":"src/framework/attrs.js"}],"src/framework/index.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1263,7 +1372,7 @@ function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArra
 
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
 
-function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
@@ -1307,9 +1416,15 @@ function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArra
 
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
 
-function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
+function _extends() { _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }
+
+function _objectWithoutProperties(source, excluded) { if (source == null) return {}; var target = _objectWithoutPropertiesLoose(source, excluded); var key, i; if (Object.getOwnPropertySymbols) { var sourceSymbolKeys = Object.getOwnPropertySymbols(source); for (i = 0; i < sourceSymbolKeys.length; i++) { key = sourceSymbolKeys[i]; if (excluded.indexOf(key) >= 0) continue; if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue; target[key] = source[key]; } } return target; }
+
+function _objectWithoutPropertiesLoose(source, excluded) { if (source == null) return {}; var target = {}; var sourceKeys = Object.keys(source); var key, i; for (i = 0; i < sourceKeys.length; i++) { key = sourceKeys[i]; if (excluded.indexOf(key) >= 0) continue; target[key] = source[key]; } return target; }
 
 var Wrapper = function Wrapper(_ref) {
   var children = _ref.children;
@@ -1330,26 +1445,25 @@ var UxInput = function UxInput(_ref2) {
       label = _ref2$attrs.label,
       placeholder = _ref2$attrs.placeholder,
       type = _ref2$attrs.type,
-      value = _ref2$attrs.value,
-      oninput = _ref2$attrs.oninput;
+      rest = _objectWithoutProperties(_ref2$attrs, ["name", "label", "placeholder", "type"]);
+
   console.log("Rendering <UxInput! />");
   return (0, _framework.h)("div", {
-    "class": "uxInput"
+    class: "uxInput"
   }, (0, _framework.h)("label", {
-    "for": name
-  }, label), (0, _framework.h)("br", null), (0, _framework.h)("input", {
+    for: name
+  }, label), (0, _framework.h)("br", null), (0, _framework.h)("input", _extends({
     type: type || text,
     placeholder: placeholder || '',
     name: name,
-    id: name,
-    value: value,
-    oninput: oninput
-  }));
+    id: name
+  }, rest)));
 };
 
 var Timer = function Timer(_ref3) {
   var useValue = _ref3.useValue,
-      useComputed = _ref3.useComputed;
+      useComputed = _ref3.useComputed,
+      useEffect = _ref3.useEffect;
 
   var _useValue = useValue(0),
       _useValue2 = _slicedToArray(_useValue, 2),
@@ -1370,16 +1484,36 @@ var Timer = function Timer(_ref3) {
     var sum = counter + Number(reversed);
     return "".concat(counter, " | ").concat(sum, " | ").concat(reversed);
   });
-  setInterval(increment, 1000);
+  var interval = setInterval(increment, 1000);
+  useEffect({
+    counter: counter
+  }, function (_ref5) {
+    var counter = _ref5.counter;
+    document.title = "You clicked ".concat(counter, " times");
+  });
+  useEffect(false, function () {
+    console.log('START!!!');
+    return function () {
+      console.log('END!!!!');
+      document.title = 'Thank you for using Ryan Air!';
+      clearInterval(interval);
+    };
+  });
   console.log("Rendering <Timer />");
   return (0, _framework.h)("h2", null, counterDisplay);
 };
 
 var Main = function Main() {
-  var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-      attrs = _ref5.attrs,
-      useState = _ref5.useState,
-      useEffect = _ref5.useEffect;
+  var _ref6 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      attrs = _ref6.attrs,
+      useState = _ref6.useState,
+      useEffect = _ref6.useEffect,
+      useRef = _ref6.useRef;
+
+  var inputRef = useRef();
+  console.log({
+    inputRef: inputRef
+  });
 
   var _useState = useState({
     name: '',
@@ -1405,7 +1539,8 @@ var Main = function Main() {
   };
 
   var incrementClicks = function incrementClicks() {
-    return state.count++;
+    inputRef().focus();
+    state.count++;
   };
 
   var updateName = function updateName(e) {
@@ -1428,6 +1563,7 @@ var Main = function Main() {
   return (0, _framework.h)("div", null, (0, _framework.h)(UxInput, {
     type: "text",
     name: "name",
+    ref: inputRef,
     label: "Your name",
     value: function value() {
       return state.name;
@@ -1450,7 +1586,7 @@ var Main = function Main() {
       return state.showColors;
     },
     oninput: toggleColorOptions
-  }), "Show color options")), (0, _framework.h)("p", null, (0, _framework.$and)(function () {
+  }), "Show color options")), (0, _framework.h)("p", null, (0, _framework.$if)(function () {
     return state.showColors;
   }, attrs.colors.map(function (color) {
     return (0, _framework.h)("label", null, (0, _framework.h)("input", {
@@ -1463,7 +1599,7 @@ var Main = function Main() {
       id: color,
       onchange: selectColor
     }), color);
-  }))));
+  }), (0, _framework.h)(Timer, null))));
 }; // const Test = () => {
 //   return [ ...Array(10000).keys() ].map( (x) => (
 //     <div>{ x }</div>
@@ -1474,7 +1610,7 @@ var Main = function Main() {
 console.time();
 (0, _framework.mount)((0, _framework.h)(Wrapper, null, (0, _framework.h)(Main, {
   colors: ['red', 'orange', 'green', 'purple', 'black']
-}), (0, _framework.h)(Timer, null)), document.body); // mount(<Test />, document.body);
+})), document.body); // mount(<Test />, document.body);
 
 console.timeEnd();
 },{"./framework":"src/framework/index.js"}],"C:/Users/dane/AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
@@ -1505,7 +1641,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "60708" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "58341" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

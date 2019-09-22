@@ -33,6 +33,26 @@ const createValue = (value) => {
 	};
 };
 
+
+const createEffect = (deps, effectFn) => {
+	let destroy, depsCache;
+
+  const destroyEffect = () => {
+    destroy && destroy(depsCache);
+  }
+
+	const runEffect = () => {
+		destroyEffect();
+		depsCache = map(deps, (x) => flatten(x));
+		destroy = effectFn(depsCache);
+	};
+
+	return {
+    runEffect,
+    destroyEffect
+  };
+};
+
 const createComputed = (deps, computedFn) => {
 	const { subscribe } = createObservable();
 	const $state = () => computedFn(map(deps, (x) => flatten(x)));
@@ -202,6 +222,7 @@ const createProxy = (record, { handler, mutable = false, env = {}} = {}) => {
 
 module.exports = {
   produce,
+	createEffect,
 	createValue,
 	createState,
 	createComputed,
