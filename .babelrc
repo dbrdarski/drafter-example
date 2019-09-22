@@ -1,9 +1,12 @@
 {
-  "presets": ["es2015", "react"],
-  "plugins": [
-    ["babel-plugin-transform-react-jsx", {
-      "pragma": "h",
-      "pragmaFrag": "h"
+  "presets": [
+    ["@babel/preset-env", {
+      "modules": false,
+      "useBuiltIns": "usage",
+      "corejs": 3
+    }],
+    ["@babel/preset-react", {
+      "pragma": "h"
     }]
   ]
 }

@@ -1,3 +1,4 @@
+import { env } from './env';
 import { patch } from './patch';
 // import { createValue, createState, createComputed } from './state';
 import { useValue, useState, useComputed } from './hooks';

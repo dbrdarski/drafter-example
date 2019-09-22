@@ -3,7 +3,7 @@ import { h, mount, $and, $if, $or } from './framework';
 const Wrapper = ({ children }) => {
   console.log('Rendering <Wrapper />')
   return (
-    <div style={ () => ({ border: '4px solid #177fb6', padding: '20px' })}>
+    <div style={() => ({ border: '4px solid #177fb6', padding: '20px' })}>
       { children }
     </div>
   );
