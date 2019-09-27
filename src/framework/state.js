@@ -5,7 +5,7 @@
 const { isPrimitive, isObject, isCallable, copy, map, empty, each } = require('./utils');
 const { createObservable } = require('./observable');
 const { flatten } = require('./extras')
-const { env } = require('./env')
+const { dispatcher } = require('./dispatcher')
 
 const ERR_STATE_UPDATE = 'State update argument must either be an Object/Array or an update function.';
 
@@ -13,11 +13,11 @@ const stateDefaults = { mutable: false, };
 
 const createValue = (value) => {
 	const { message, subscribe } = createObservable();
-	const $state = () => value;
+	const $state = () => {
+		dispatcher.render.inProgress && dispatcher.register(subscribe);
+		return value;
+	};
 	const setState = (v) => {
-		// if (env.renderInProgress) {
-		// 	env.register(subscribe(env.renderTarget));
-		// }
 		if (typeof v === 'function') {
 			v = v(value);
 		}
@@ -33,6 +33,19 @@ const createValue = (value) => {
 	};
 };
 
+const createComputed = (deps, computedFn) => {
+	const { subscribe, message } = createObservable();
+	let cache, subscriptions;
+	const clearCache = () => cache = null;
+	const $state = () => {
+		dispatcher.render.inProgress && dispatcher.register(subscribe);
+		return computedFn(map(deps, (x) => flatten(x)))
+	};
+	return {
+		$state,
+		subscribe
+	}
+};
 
 const createEffect = (deps, effectFn) => {
 	let destroy, depsCache;
@@ -53,17 +66,8 @@ const createEffect = (deps, effectFn) => {
   };
 };
 
-const createComputed = (deps, computedFn) => {
-	const { subscribe } = createObservable();
-	const $state = () => computedFn(map(deps, (x) => flatten(x)));
-	return {
-		$state,
-		subscribe
-	}
-};
-
 const createState = (state = {}, options) => {
-	const { mutable, env } = Object.assign({}, stateDefaults, options);
+	const { mutable, dispatcher } = Object.assign({}, stateDefaults, options);
 	const { message, subscribe } = createObservable();
 	const handler = (stateUpdate) => {
 		if (stateUpdate !== state) {
@@ -72,7 +76,7 @@ const createState = (state = {}, options) => {
 		}
 	}
 	const stateProxy = createProxy(state, {
-		// env,
+		// dispatcher,
 		handler, mutable
 	});
 	const getState = () => stateProxy();
@@ -102,7 +106,7 @@ const mutatorList = { pop: 0, shift: 0, push: 1, unshift: 1, splice: 0, reverse:
 const apply = (fn) => fn();
 const applyToObjectKeys = (proxy) => (v, k) => isPrimitive(v) || proxy[k]();
 
-const subProxy = (subarray, prop, subproxies, { handler, mutable, env }) => {
+const subProxy = (subarray, prop, subproxies, { handler, mutable, dispatcher }) => {
 	if (!subproxies.hasOwnProperty(prop)) {
 		subproxies[prop] = createProxy(subarray, {
 			handler,
@@ -123,7 +127,7 @@ const stateGuard = (state, { mutable = false } = {}) => {
 	}
 };
 
-const createProxy = (record, { handler, mutable = false, env = {}} = {}) => {
+const createProxy = (record, { handler, mutable = false, dispatcher = {}} = {}) => {
 	let proxy,
 			subproxies = {},
 			state = stateGuard(record, { mutable });
@@ -147,11 +151,11 @@ const createProxy = (record, { handler, mutable = false, env = {}} = {}) => {
 			if (record.hasOwnProperty(prop)) {
 				const p = record[prop];
 				return isPrimitive(p)
-					? env.isRenderMode
+					? dispatcher.isRenderMode
 						? () => p
 						: p
 					: subProxy(p, prop, subproxies, {
-						env,
+						dispatcher,
 						mutable,
 						handler: (record) => parent[prop] = record
 					});
@@ -184,8 +188,8 @@ const createProxy = (record, { handler, mutable = false, env = {}} = {}) => {
 			}
 		},
 		apply: ( target, thisArg, args ) => {
-			if (env.isRenderMode) {
-        // env.renderTarget.unmountHandlers.push(subscribe(env.renderTarget.shouldUpdate));
+			if (dispatcher.isRenderMode) {
+        // dispatcher.renderTarget.unmountHandlers.push(subscribe(dispatcher.renderTarget.shouldUpdate));
 			}
 			if (!args.length) {
 				Object.freeze(record);

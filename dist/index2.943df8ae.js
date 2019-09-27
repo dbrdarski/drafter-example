@@ -556,20 +556,42 @@ var $gte = flat(function (x, y) {
 // };
 
 exports.$gte = $gte;
-},{}],"src/framework/env.js":[function(require,module,exports) {
+},{}],"src/framework/dispatcher.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.env = void 0;
-var env = {
-  register: function register(destroyFn) {
-    this.renderTargetUnsubscribe.push(destroyFn);
+exports.dispatcher = void 0;
+
+var _observable = require("./observable");
+
+var queue, render;
+
+var createUpdate = function createUpdate() {
+  queue = (0, _observable.createObservable)();
+  setTimeout(function () {
+    queue.message();
+    queue = null;
+  }, 0);
+};
+
+var dispatcher = {
+  register: function register(subscribe) {
+    render.unsubscribe(subscribe(render.target));
+    render.unsubscribeList.push(subscribe(render.target));
+  },
+  render: function render(t) {
+    // this.render.inProgress = true;
+    this.target = t;
+  },
+  scheduleUpdate: function scheduleUpdate(update) {
+    queue || createUpdate();
+    return queue.subscribe(update);
   }
 };
-exports.env = env;
-},{}],"src/framework/state.js":[function(require,module,exports) {
+exports.dispatcher = dispatcher;
+},{"./observable":"src/framework/observable.js"}],"src/framework/state.js":[function(require,module,exports) {
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
 
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
@@ -596,8 +618,8 @@ var _require2 = require('./observable'),
 var _require3 = require('./extras'),
     flatten = _require3.flatten;
 
-var _require4 = require('./env'),
-    env = _require4.env;
+var _require4 = require('./dispatcher'),
+    dispatcher = _require4.dispatcher;
 
 var ERR_STATE_UPDATE = 'State update argument must either be an Object/Array or an update function.';
 var stateDefaults = {
@@ -610,13 +632,11 @@ var createValue = function createValue(value) {
       subscribe = _createObservable.subscribe;
 
   var $state = function $state() {
+    dispatcher.render.inProgress && dispatcher.register(subscribe);
     return value;
   };
 
   var setState = function setState(v) {
-    // if (env.renderInProgress) {
-    // 	env.register(subscribe(env.renderTarget));
-    // }
     if (typeof v === 'function') {
       v = v(value);
     }
@@ -630,6 +650,30 @@ var createValue = function createValue(value) {
   return {
     $state: $state,
     setState: setState,
+    subscribe: subscribe
+  };
+};
+
+var createComputed = function createComputed(deps, computedFn) {
+  var _createObservable2 = createObservable(),
+      subscribe = _createObservable2.subscribe,
+      message = _createObservable2.message;
+
+  var cache, subscriptions;
+
+  var clearCache = function clearCache() {
+    return cache = null;
+  };
+
+  var $state = function $state() {
+    dispatcher.render.inProgress && dispatcher.register(subscribe);
+    return computedFn(map(deps, function (x) {
+      return flatten(x);
+    }));
+  };
+
+  return {
+    $state: $state,
     subscribe: subscribe
   };
 };
@@ -655,29 +699,13 @@ var createEffect = function createEffect(deps, effectFn) {
   };
 };
 
-var createComputed = function createComputed(deps, computedFn) {
-  var _createObservable2 = createObservable(),
-      subscribe = _createObservable2.subscribe;
-
-  var $state = function $state() {
-    return computedFn(map(deps, function (x) {
-      return flatten(x);
-    }));
-  };
-
-  return {
-    $state: $state,
-    subscribe: subscribe
-  };
-};
-
 var createState = function createState() {
   var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
   var options = arguments.length > 1 ? arguments[1] : undefined;
 
   var _Object$assign = Object.assign({}, stateDefaults, options),
       mutable = _Object$assign.mutable,
-      env = _Object$assign.env;
+      dispatcher = _Object$assign.dispatcher;
 
   var _createObservable3 = createObservable(),
       message = _createObservable3.message,
@@ -691,7 +719,7 @@ var createState = function createState() {
   };
 
   var stateProxy = createProxy(state, {
-    // env,
+    // dispatcher,
     handler: handler,
     mutable: mutable
   });
@@ -754,7 +782,7 @@ var applyToObjectKeys = function applyToObjectKeys(proxy) {
 var subProxy = function subProxy(subarray, prop, subproxies, _ref) {
   var handler = _ref.handler,
       mutable = _ref.mutable,
-      env = _ref.env;
+      dispatcher = _ref.dispatcher;
 
   if (!subproxies.hasOwnProperty(prop)) {
     subproxies[prop] = createProxy(subarray, {
@@ -787,8 +815,8 @@ var createProxy = function createProxy(record) {
       handler = _ref3.handler,
       _ref3$mutable = _ref3.mutable,
       mutable = _ref3$mutable === void 0 ? false : _ref3$mutable,
-      _ref3$env = _ref3.env,
-      env = _ref3$env === void 0 ? {} : _ref3$env;
+      _ref3$dispatcher = _ref3.dispatcher,
+      dispatcher = _ref3$dispatcher === void 0 ? {} : _ref3$dispatcher;
 
   var proxy,
       subproxies = {},
@@ -820,10 +848,10 @@ var createProxy = function createProxy(record) {
     get: function get(target, prop, parent) {
       if (record.hasOwnProperty(prop)) {
         var p = record[prop];
-        return isPrimitive(p) ? env.isRenderMode ? function () {
+        return isPrimitive(p) ? dispatcher.isRenderMode ? function () {
           return p;
         } : p : subProxy(p, prop, subproxies, {
-          env: env,
+          dispatcher: dispatcher,
           mutable: mutable,
           handler: function handler(record) {
             return parent[prop] = record;
@@ -856,7 +884,7 @@ var createProxy = function createProxy(record) {
       }
     },
     apply: function apply(target, thisArg, args) {
-      if (env.isRenderMode) {// env.renderTarget.unmountHandlers.push(subscribe(env.renderTarget.shouldUpdate));
+      if (dispatcher.isRenderMode) {// dispatcher.renderTarget.unmountHandlers.push(subscribe(dispatcher.renderTarget.shouldUpdate));
       }
 
       if (!args.length) {
@@ -915,7 +943,7 @@ module.exports = {
   stateGuard: stateGuard,
   subProxy: subProxy
 };
-},{"./utils":"src/framework/utils.js","./observable":"src/framework/observable.js","./extras":"src/framework/extras.js","./env":"src/framework/env.js"}],"src/framework/patch.js":[function(require,module,exports) {
+},{"./utils":"src/framework/utils.js","./observable":"src/framework/observable.js","./extras":"src/framework/extras.js","./dispatcher":"src/framework/dispatcher.js"}],"src/framework/patch.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1097,7 +1125,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.renderNode = void 0;
 
-var _env = require("./env");
+var _dispatcher = require("./dispatcher");
 
 var _patch = require("./patch");
 
@@ -1146,13 +1174,33 @@ var createTextNode = function createTextNode(text) {
 };
 
 var createExpression = function createExpression(fn) {
-  var resultCache, elementCache, updatesCache, destroyCache;
+  var $parent,
+      resultCache,
+      elementCache,
+      updatesCache,
+      destroyCache,
+      cancelUpdate = false;
 
   var destroy = function destroy() {
-    destroyCache && destroyCache();
+    cancelUpdate && cancelUpdate(); // if called during an poending update, cancel it!
+
+    destroyCache && destroyCache(); // TODO: This might need to be removed!
+
+    destroyObservable.message();
+    instance.unsubscribeList.forEach(function (f) {
+      return f();
+    });
   };
 
-  var update = function update($parent) {
+  var destroyObservable = (0, _observable.createObservable)();
+
+  var update = function update($parentUpdate) {
+    cancelUpdate = false; // clears cancel update
+
+    if ($parentUpdate) {
+      $parent = $parentUpdate;
+    }
+
     var result = fn();
 
     if (result !== resultCache) {
@@ -1173,7 +1221,23 @@ var createExpression = function createExpression(fn) {
     updatesCache && updatesCache();
   };
 
+  var scheduleUpdate = function scheduleUpdate() {
+    if (!cancelUpdate) {
+      cancelUpdate = _dispatcher.dispatcher.scheduleUpdate(update); // puts the update into the dispatcher queue and return a cancel handler      
+    }
+  };
+
+  var instance = {
+    unsubscribe: destroyObservable.subscribe,
+    unsubscribeList: [],
+    target: scheduleUpdate,
+    inProgress: true
+  };
+
+  _dispatcher.dispatcher.render(instance);
+
   update();
+  instance.inProgress = false;
   return [elementCache, update, destroy];
 };
 
@@ -1301,7 +1365,8 @@ var createComponent = function createComponent(_ref2) {
       return d();
     });
     destroyObservable.message();
-  };
+  }; // parentDestroy.subscribe()
+
 
   var update = function update() {
     updateDom.apply(void 0, arguments);
@@ -1334,7 +1399,7 @@ var createComponent = function createComponent(_ref2) {
 
   return [$el, update, destroy];
 };
-},{"./env":"src/framework/env.js","./patch":"src/framework/patch.js","./observable":"src/framework/observable.js","./hooks":"src/framework/hooks.js","./attrs":"src/framework/attrs.js"}],"src/framework/index.js":[function(require,module,exports) {
+},{"./dispatcher":"src/framework/dispatcher.js","./patch":"src/framework/patch.js","./observable":"src/framework/observable.js","./hooks":"src/framework/hooks.js","./attrs":"src/framework/attrs.js"}],"src/framework/index.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1641,7 +1706,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "58341" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "62197" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

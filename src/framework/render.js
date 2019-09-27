@@ -1,4 +1,4 @@
-import { env } from './env';
+import { dispatcher } from './dispatcher';
 import { patch } from './patch';
 // import { createValue, createState, createComputed } from './state';
 import { createObservable } from './observable';
@@ -26,13 +26,25 @@ const createEmptyNode = () => [ document.createTextNode(''), false ]
 const createTextNode = (text) => [ document.createTextNode(text), false ];
 
 const createExpression = (fn) => {
-  let resultCache, elementCache, updatesCache, destroyCache;
-  const destroy = () => {
-    destroyCache && destroyCache();
-  };
-  const update = ($parent) => {
-    const result = fn();
+  let $parent,
+      resultCache, elementCache, updatesCache,
+      destroyCache, cancelUpdate = false;
 
+  const destroy = () => {
+    cancelUpdate && cancelUpdate(); // if called during an poending update, cancel it!
+    destroyCache && destroyCache(); // TODO: This might need to be removed!
+
+    destroyObservable.message();
+    instance.unsubscribeList.forEach(f => f());
+  };
+  const destroyObservable = createObservable();
+
+  const update = ($parentUpdate) => {
+    cancelUpdate = false; // clears cancel update
+    if ($parentUpdate) {
+      $parent = $parentUpdate;
+    }
+    const result = fn();
     if (result !== resultCache) {
       const [ element, updates, destroyUpdate ] = renderNode(result);
       destroy();
@@ -44,7 +56,24 @@ const createExpression = (fn) => {
     }
     updatesCache && updatesCache();
   };
+
+  const scheduleUpdate = () => {
+    if (!cancelUpdate) {
+      cancelUpdate = dispatcher.scheduleUpdate(update); // puts the update into the dispatcher queue and return a cancel handler      
+    }
+  };
+
+  const instance = {
+    unsubscribe: destroyObservable.subscribe,
+    unsubscribeList: [],
+    target: scheduleUpdate,
+    inProgress: true
+  };
+
+  dispatcher.render(instance);
   update();
+  instance.inProgress = false;
+
   return [ elementCache, update, destroy ];
 };
 
@@ -121,6 +150,8 @@ const createComponent = ({ tagName: component, attrs, children }) => {
     unsubscribeList.forEach( d => d());
     destroyObservable.message();
   };
+
+  // parentDestroy.subscribe()
 
   const update = (...args) => {
     updateDom(...args);
