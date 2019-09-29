@@ -31,14 +31,14 @@ const createExpression = (fn) => {
       destroyCache, cancelUpdate = false;
 
   const destroy = () => {
-    cancelUpdate && cancelUpdate(); // if called during an poending update, cancel it!
+    cancelUpdate && cancelUpdate(); // if called during an pending update, cancel it!
     destroyCache && destroyCache(); // TODO: This might need to be removed!
 
     destroyObservable.message();
     instance.unsubscribeList.forEach(f => f());
   };
-  const destroyObservable = createObservable();
 
+  const destroyObservable = createObservable();
   const update = ($parentUpdate) => {
     cancelUpdate = false; // clears cancel update
     if ($parentUpdate) {
@@ -54,12 +54,12 @@ const createExpression = (fn) => {
       resultCache = result;
       updatesCache = updates;
     }
-    updatesCache && updatesCache();
+    updatesCache && updatesCache(); // this needs to go with new subscription system
   };
 
   const scheduleUpdate = () => {
     if (!cancelUpdate) {
-      cancelUpdate = dispatcher.scheduleUpdate(update); // puts the update into the dispatcher queue and return a cancel handler      
+      cancelUpdate = dispatcher.scheduleUpdate(update); // puts the update into the dispatcher queue and return a cancel handler
     }
   };
 

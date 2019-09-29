@@ -259,9 +259,9 @@ var createObservable = function createObservable() {
       position: void 0
     };
     item.update(observers);
-    return function () {
-      observers[item.position] = false;
-      dirty = true;
+    return function (newHandler) {
+      observers[item.position] = newHandler || false;
+      if (!newHandler) dirty = true;
     };
   };
 
@@ -1182,7 +1182,7 @@ var createExpression = function createExpression(fn) {
       cancelUpdate = false;
 
   var destroy = function destroy() {
-    cancelUpdate && cancelUpdate(); // if called during an poending update, cancel it!
+    cancelUpdate && cancelUpdate(); // if called during an pending update, cancel it!
 
     destroyCache && destroyCache(); // TODO: This might need to be removed!
 
@@ -1218,12 +1218,12 @@ var createExpression = function createExpression(fn) {
       updatesCache = updates;
     }
 
-    updatesCache && updatesCache();
+    updatesCache && updatesCache(); // this needs to go with new subscription system
   };
 
   var scheduleUpdate = function scheduleUpdate() {
     if (!cancelUpdate) {
-      cancelUpdate = _dispatcher.dispatcher.scheduleUpdate(update); // puts the update into the dispatcher queue and return a cancel handler      
+      cancelUpdate = _dispatcher.dispatcher.scheduleUpdate(update); // puts the update into the dispatcher queue and return a cancel handler
     }
   };
 
@@ -1678,7 +1678,7 @@ console.time();
 })), document.body); // mount(<Test />, document.body);
 
 console.timeEnd();
-},{"./framework":"src/framework/index.js"}],"C:/Users/dane/AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"./framework":"src/framework/index.js"}],"../../Users/asus/AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -1706,7 +1706,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "62197" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "60469" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
@@ -1881,5 +1881,5 @@ function hmrAcceptRun(bundle, id) {
     return true;
   }
 }
-},{}]},{},["C:/Users/dane/AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js","src/index2.js"], null)
+},{}]},{},["../../Users/asus/AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js","src/index2.js"], null)
 //# sourceMappingURL=/index2.943df8ae.js.map

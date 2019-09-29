@@ -11,9 +11,9 @@ export const createObservable = () => {
     const item = { fn, update, position: void 0 };
     item.update(observers);
 
-    return () => {
-      observers[item.position] = false;
-      dirty = true;
+    return (newHandler) => {
+      observers[item.position] = newHandler || false;
+      if (!newHandler) dirty = true;
     }
   };
 
