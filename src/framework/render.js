@@ -26,33 +26,35 @@ const createEmptyNode = () => [ document.createTextNode(''), false ]
 const createTextNode = (text) => [ document.createTextNode(text), false ];
 
 const createExpression = (fn) => {
-  let $parent,
-      resultCache, elementCache, updatesCache,
-      destroyCache, cancelUpdate = false;
+  let $parent, resultCache, elementCache,
+      updatesCache, destroyCache, cancelUpdate = false;
 
+  // dispatcher.render() -> setCurrent renderTarget
   const destroy = () => {
     cancelUpdate && cancelUpdate(); // if called during an pending update, cancel it!
     destroyCache && destroyCache(); // TODO: This might need to be removed!
-
-    destroyObservable.message();
-    instance.unsubscribeList.forEach(f => f());
+    destroyObservableMessage();
+    // instance.unsubscribeList.forEach(f => f());
   };
 
-  const destroyObservable = createObservable();
+  const updateDestroyer = (destroyUpdate) => {
+    destroyCache = (destroyCache ? subscribeToDestroyOb : destroyUpdate)(destroyUpdate);
+  }
+
+  const [ destroyObservableMessage, subscribeToDestroyOb ] = createObservable();
   const update = ($parentUpdate) => {
     cancelUpdate = false; // clears cancel update
-    if ($parentUpdate) {
-      $parent = $parentUpdate;
-    }
+    if ($parentUpdate) $parent = $parentUpdate;
     const result = fn();
     if (result !== resultCache) {
       const [ element, updates, destroyUpdate ] = renderNode(result);
       destroy();
       destroyCache = destroyUpdate;
+      // updateDestroyer(destroyUpdate);
       $parent && patch($parent, element, elementCache);
       elementCache = element;
       resultCache = result;
-      updatesCache = updates;
+      // updatesCache = updates;
     }
     updatesCache && updatesCache(); // this needs to go with new subscription system
   };
@@ -64,7 +66,7 @@ const createExpression = (fn) => {
   };
 
   const instance = {
-    unsubscribe: destroyObservable.subscribe,
+    unsubscribe: subscribeToDestroyOb,
     unsubscribeList: [],
     target: scheduleUpdate,
     inProgress: true
@@ -74,7 +76,7 @@ const createExpression = (fn) => {
   update();
   instance.inProgress = false;
 
-  return [ elementCache, update, destroy ];
+  return [ elementCache, update, destroyCache ];
 };
 
 const createFragment = (vNodes) => {
@@ -143,19 +145,19 @@ const createElement = ({ tagName, attrs, children }) => {
 
 const createComponent = ({ tagName: component, attrs, children }) => {
   const unsubscribeList = [];
-  const updateObservable = createObservable();
-  const destroyObservable = createObservable();
+  const [ updateObservableMessage, updateObservableSubscribe ] = createObservable();
+  const [ destroyObservableMessage, subscribeToDestroyOb ] = createObservable();
 
   const destroy = () => {
     unsubscribeList.forEach( d => d());
-    destroyObservable.message();
+    destroyObservableMessage();
   };
 
   // parentDestroy.subscribe()
 
   const update = (...args) => {
     updateDom(...args);
-    updateObservable.message();
+    updateObservableMessage();
   }
 
   const connectState = (subscribe) => setTimeout(() => unsubscribeList.push(subscribe(update)));
@@ -163,8 +165,8 @@ const createComponent = ({ tagName: component, attrs, children }) => {
     attrs,
     children,
     useEffect: useEffect.bind({
-      subscribeToUpdates: updateObservable.subscribe,
-      subscribeToDestroy: destroyObservable.subscribe
+      subscribeToUpdates: updateObservableSubscribe,
+      subscribeToDestroy: subscribeToDestroyOb
     }),
     useComputed: useComputed.bind(connectState),
     // useValue: hook.bind(connectState, createValue),

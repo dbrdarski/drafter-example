@@ -1,18 +1,18 @@
 import { createObservable } from './observable';
 
-let queue, render;
+let queue, expression;
 const createUpdate = () => {
   queue = createObservable();
   setTimeout(() => {
-    queue.message();
+    queue[0]();
     queue = null;
   }, 0);
 }
 export const dispatcher = {
-  register (subscribe) {
-    render.unsubscribe(subscribe(render.target));
-    render.unsubscribeList.push(
-      subscribe(render.target)
+  register (subscribeFn) {
+    expression.unsubscribe(subscribeFn(expression.target));
+    expression.unsubscribeList.push(
+      subscribe(expression.target)
     );
   },
   render (t) {
@@ -21,6 +21,6 @@ export const dispatcher = {
   },
   scheduleUpdate (update) {
     queue || createUpdate();
-    return queue.subscribe(update);
+    return queue[1](update);
   }
 };

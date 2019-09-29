@@ -1,6 +1,7 @@
-export const createObservable = () => {
+export const createObservable = (emitOnEqualValues = true) => {
   let dirty = false;
   let observers = [];
+  let valueCache;
 
   function update (newObserverList) {
     this.position = newObserverList.length;
@@ -18,26 +19,28 @@ export const createObservable = () => {
   };
 
   const message = ( msg ) => {
-    if (dirty) {
-      let newObserverList = [];
-      for (observers of observers) {
-        if (observer) {
-          observer.fn( msg );
-          observer.update(newObserverList)
+    if (emitOnEqualValues || msg !== valueCache) {
+      if (dirty) {
+        let newObserverList = [];
+        for (observers of observers) {
+          if (observer) {
+            observer.fn( msg );
+            observer.update(newObserverList)
+          }
         }
+        observers = newObserverList;
+        dirty = false;
+      } else {
+        observers.forEach(
+          (o) => {
+            return o.fn( msg )
+          }
+        );
       }
-      observers = newObserverList;
-      dirty = false;
-    } else {
-      observers.forEach(
-        (o) => {
-          return o.fn( msg )
-        }
-      );
     }
 	};
-  return {
-    subscribe,
-    message
-  };
+  return [
+    message,
+    subscribe
+  ];
 }

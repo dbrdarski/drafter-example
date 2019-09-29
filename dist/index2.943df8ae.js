@@ -244,8 +244,10 @@ Object.defineProperty(exports, "__esModule", {
 exports.createObservable = void 0;
 
 var createObservable = function createObservable() {
+  var emitOnEqualValues = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : true;
   var dirty = false;
   var observers = [];
+  var valueCache;
 
   function update(newObserverList) {
     this.position = newObserverList.length;
@@ -266,49 +268,48 @@ var createObservable = function createObservable() {
   };
 
   var message = function message(msg) {
-    if (dirty) {
-      var newObserverList = [];
-      var _iteratorNormalCompletion = true;
-      var _didIteratorError = false;
-      var _iteratorError = undefined;
+    if (emitOnEqualValues || msg !== valueCache) {
+      if (dirty) {
+        var newObserverList = [];
+        var _iteratorNormalCompletion = true;
+        var _didIteratorError = false;
+        var _iteratorError = undefined;
 
-      try {
-        for (var _iterator = observers[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-          observers = _step.value;
-
-          if (observer) {
-            observer.fn(msg);
-            observer.update(newObserverList);
-          }
-        }
-      } catch (err) {
-        _didIteratorError = true;
-        _iteratorError = err;
-      } finally {
         try {
-          if (!_iteratorNormalCompletion && _iterator.return != null) {
-            _iterator.return();
+          for (var _iterator = observers[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            observers = _step.value;
+
+            if (observer) {
+              observer.fn(msg);
+              observer.update(newObserverList);
+            }
           }
+        } catch (err) {
+          _didIteratorError = true;
+          _iteratorError = err;
         } finally {
-          if (_didIteratorError) {
-            throw _iteratorError;
+          try {
+            if (!_iteratorNormalCompletion && _iterator.return != null) {
+              _iterator.return();
+            }
+          } finally {
+            if (_didIteratorError) {
+              throw _iteratorError;
+            }
           }
         }
-      }
 
-      observers = newObserverList;
-      dirty = false;
-    } else {
-      observers.forEach(function (o) {
-        return o.fn(msg);
-      });
+        observers = newObserverList;
+        dirty = false;
+      } else {
+        observers.forEach(function (o) {
+          return o.fn(msg);
+        });
+      }
     }
   };
 
-  return {
-    subscribe: subscribe,
-    message: message
-  };
+  return [message, subscribe];
 };
 
 exports.createObservable = createObservable;
@@ -566,20 +567,20 @@ exports.dispatcher = void 0;
 
 var _observable = require("./observable");
 
-var queue, render;
+var queue, expression;
 
 var createUpdate = function createUpdate() {
   queue = (0, _observable.createObservable)();
   setTimeout(function () {
-    queue.message();
+    queue[0]();
     queue = null;
   }, 0);
 };
 
 var dispatcher = {
-  register: function register(subscribe) {
-    render.unsubscribe(subscribe(render.target));
-    render.unsubscribeList.push(subscribe(render.target));
+  register: function register(subscribeFn) {
+    expression.unsubscribe(subscribeFn(expression.target));
+    expression.unsubscribeList.push(subscribe(expression.target));
   },
   render: function render(t) {
     // this.render.inProgress = true;
@@ -587,7 +588,7 @@ var dispatcher = {
   },
   scheduleUpdate: function scheduleUpdate(update) {
     queue || createUpdate();
-    return queue.subscribe(update);
+    return queue[1](update);
   }
 };
 exports.dispatcher = dispatcher;
@@ -628,8 +629,9 @@ var stateDefaults = {
 
 var createValue = function createValue(value) {
   var _createObservable = createObservable(),
-      message = _createObservable.message,
-      subscribe = _createObservable.subscribe;
+      _createObservable2 = _slicedToArray(_createObservable, 2),
+      message = _createObservable2[0],
+      subscribe = _createObservable2[1];
 
   var $state = function $state() {
     dispatcher.render.inProgress && dispatcher.register(subscribe);
@@ -655,9 +657,10 @@ var createValue = function createValue(value) {
 };
 
 var createComputed = function createComputed(deps, computedFn) {
-  var _createObservable2 = createObservable(),
-      subscribe = _createObservable2.subscribe,
-      message = _createObservable2.message;
+  var _createObservable3 = createObservable(),
+      _createObservable4 = _slicedToArray(_createObservable3, 2),
+      message = _createObservable4[0],
+      subscribe = _createObservable4[1];
 
   var cache, subscriptions;
 
@@ -707,16 +710,17 @@ var createState = function createState() {
       mutable = _Object$assign.mutable,
       dispatcher = _Object$assign.dispatcher;
 
-  var _createObservable3 = createObservable(),
-      message = _createObservable3.message,
-      subscribe = _createObservable3.subscribe;
+  var _createObservable5 = createObservable(false),
+      _createObservable6 = _slicedToArray(_createObservable5, 2),
+      handler = _createObservable6[0],
+      subscribe = _createObservable6[1]; // const handler = (stateUpdate) => {
+  // 	if (stateUpdate !== state) {
+  // 		state = stateUpdate;
+  // 		message(state);
+  // 	}
+  // }
+  // const handler = message;
 
-  var handler = function handler(stateUpdate) {
-    if (stateUpdate !== state) {
-      state = stateUpdate;
-      message(state);
-    }
-  };
 
   var stateProxy = createProxy(state, {
     // dispatcher,
@@ -825,9 +829,10 @@ var createProxy = function createProxy(record) {
   });
   var isArray = Array.isArray(record);
 
-  var _createObservable4 = createObservable(),
-      message = _createObservable4.message,
-      subscribe = _createObservable4.subscribe;
+  var _createObservable7 = createObservable(),
+      _createObservable8 = _slicedToArray(_createObservable7, 2),
+      message = _createObservable8[0],
+      subscribe = _createObservable8[1];
 
   var unsubscribe = handler && subscribe(handler); // handler && console.log({ handler })
 
@@ -1179,28 +1184,29 @@ var createExpression = function createExpression(fn) {
       elementCache,
       updatesCache,
       destroyCache,
-      cancelUpdate = false;
+      cancelUpdate = false; // dispatcher.render() -> setCurrent renderTarget
 
   var destroy = function destroy() {
     cancelUpdate && cancelUpdate(); // if called during an pending update, cancel it!
 
     destroyCache && destroyCache(); // TODO: This might need to be removed!
 
-    destroyObservable.message();
-    instance.unsubscribeList.forEach(function (f) {
-      return f();
-    });
+    destroyObservableMessage(); // instance.unsubscribeList.forEach(f => f());
   };
 
-  var destroyObservable = (0, _observable.createObservable)();
+  var updateDestroyer = function updateDestroyer(destroyUpdate) {
+    destroyCache = (destroyCache ? subscribeToDestroyOb : destroyUpdate)(destroyUpdate);
+  };
+
+  var _createObservable = (0, _observable.createObservable)(),
+      _createObservable2 = _slicedToArray(_createObservable, 2),
+      destroyObservableMessage = _createObservable2[0],
+      subscribeToDestroyOb = _createObservable2[1];
 
   var update = function update($parentUpdate) {
     cancelUpdate = false; // clears cancel update
 
-    if ($parentUpdate) {
-      $parent = $parentUpdate;
-    }
-
+    if ($parentUpdate) $parent = $parentUpdate;
     var result = fn();
 
     if (result !== resultCache) {
@@ -1211,11 +1217,11 @@ var createExpression = function createExpression(fn) {
           destroyUpdate = _renderNode2[2];
 
       destroy();
-      destroyCache = destroyUpdate;
+      destroyCache = destroyUpdate; // updateDestroyer(destroyUpdate);
+
       $parent && (0, _patch.patch)($parent, element, elementCache);
       elementCache = element;
-      resultCache = result;
-      updatesCache = updates;
+      resultCache = result; // updatesCache = updates;
     }
 
     updatesCache && updatesCache(); // this needs to go with new subscription system
@@ -1228,7 +1234,7 @@ var createExpression = function createExpression(fn) {
   };
 
   var instance = {
-    unsubscribe: destroyObservable.subscribe,
+    unsubscribe: subscribeToDestroyOb,
     unsubscribeList: [],
     target: scheduleUpdate,
     inProgress: true
@@ -1238,7 +1244,7 @@ var createExpression = function createExpression(fn) {
 
   update();
   instance.inProgress = false;
-  return [elementCache, update, destroy];
+  return [elementCache, update, destroyCache];
 };
 
 var createFragment = function createFragment(vNodes) {
@@ -1357,20 +1363,28 @@ var createComponent = function createComponent(_ref2) {
       attrs = _ref2.attrs,
       children = _ref2.children;
   var unsubscribeList = [];
-  var updateObservable = (0, _observable.createObservable)();
-  var destroyObservable = (0, _observable.createObservable)();
+
+  var _createObservable3 = (0, _observable.createObservable)(),
+      _createObservable4 = _slicedToArray(_createObservable3, 2),
+      updateObservableMessage = _createObservable4[0],
+      updateObservableSubscribe = _createObservable4[1];
+
+  var _createObservable5 = (0, _observable.createObservable)(),
+      _createObservable6 = _slicedToArray(_createObservable5, 2),
+      destroyObservableMessage = _createObservable6[0],
+      subscribeToDestroyOb = _createObservable6[1];
 
   var destroy = function destroy() {
     unsubscribeList.forEach(function (d) {
       return d();
     });
-    destroyObservable.message();
+    destroyObservableMessage();
   }; // parentDestroy.subscribe()
 
 
   var update = function update() {
     updateDom.apply(void 0, arguments);
-    updateObservable.message();
+    updateObservableMessage();
   };
 
   var connectState = function connectState(subscribe) {
@@ -1383,8 +1397,8 @@ var createComponent = function createComponent(_ref2) {
     attrs: attrs,
     children: children,
     useEffect: _hooks.useEffect.bind({
-      subscribeToUpdates: updateObservable.subscribe,
-      subscribeToDestroy: destroyObservable.subscribe
+      subscribeToUpdates: updateObservableSubscribe,
+      subscribeToDestroy: subscribeToDestroyOb
     }),
     useComputed: _hooks.useComputed.bind(connectState),
     // useValue: hook.bind(connectState, createValue),
@@ -1706,7 +1720,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "60469" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "53768" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

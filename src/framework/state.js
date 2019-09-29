@@ -12,7 +12,7 @@ const ERR_STATE_UPDATE = 'State update argument must either be an Object/Array o
 const stateDefaults = { mutable: false, };
 
 const createValue = (value) => {
-	const { message, subscribe } = createObservable();
+	const [ message, subscribe ] = createObservable();
 	const $state = () => {
 		dispatcher.render.inProgress && dispatcher.register(subscribe);
 		return value;
@@ -34,7 +34,7 @@ const createValue = (value) => {
 };
 
 const createComputed = (deps, computedFn) => {
-	const { subscribe, message } = createObservable();
+	const [ message, subscribe ] = createObservable();
 	let cache, subscriptions;
 	const clearCache = () => cache = null;
 	const $state = () => {
@@ -68,13 +68,14 @@ const createEffect = (deps, effectFn) => {
 
 const createState = (state = {}, options) => {
 	const { mutable, dispatcher } = Object.assign({}, stateDefaults, options);
-	const { message, subscribe } = createObservable();
-	const handler = (stateUpdate) => {
-		if (stateUpdate !== state) {
-			state = stateUpdate;
-			message(state);
-		}
-	}
+	const [ handler, subscribe ] = createObservable(false);
+	// const handler = (stateUpdate) => {
+	// 	if (stateUpdate !== state) {
+	// 		state = stateUpdate;
+	// 		message(state);
+	// 	}
+	// }
+	// const handler = message;
 	const stateProxy = createProxy(state, {
 		// dispatcher,
 		handler, mutable
@@ -132,7 +133,7 @@ const createProxy = (record, { handler, mutable = false, dispatcher = {}} = {}) 
 			subproxies = {},
 			state = stateGuard(record, { mutable });
   const isArray = Array.isArray(record);
-  const { message, subscribe } = createObservable();
+  const [ message, subscribe ] = createObservable();
   const unsubscribe = handler && subscribe(handler);
 	// handler && console.log({ handler })
 	const defineMutatorFn = isArray && mutable
