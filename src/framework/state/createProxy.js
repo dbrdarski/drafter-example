@@ -1,113 +1,12 @@
-// TODO: Freeze on Create State...
-// TODO: Investigate: assign, deep assign.
-// TODO: Support arrays in shorthand mode
-
-const { isPrimitive, isObject, isCallable, copy, map, empty, each } = require('./utils');
-const { createObservable } = require('./observable');
-const { flatten } = require('./extras')
-const { dispatcher } = require('./dispatcher')
-
-const ERR_STATE_UPDATE = 'State update argument must either be an Object/Array or an update function.';
-
-const stateDefaults = { mutable: false, };
-
-const createValue = (value) => {
-	const [ message, subscribe ] = createObservable();
-	const $state = () => {
-		dispatcher.render.inProgress && dispatcher.register(subscribe);
-		return value;
-	};
-	const setState = (v) => {
-		if (typeof v === 'function') {
-			v = v(value);
-		}
-		if (value !== v) {
-			value = v;
-			message(v);
-		}
-	};
-	return {
-		$state,
-		setState,
-		subscribe
-	};
-};
-
-const createComputed = (deps, computedFn) => {
-	const [ message, subscribe ] = createObservable();
-	let cache, subscriptions;
-	const clearCache = () => cache = null;
-	const $state = () => {
-		dispatcher.render.inProgress && dispatcher.register(subscribe);
-		return computedFn(map(deps, (x) => flatten(x)))
-	};
-	return {
-		$state,
-		subscribe
-	}
-};
-
-const createEffect = (deps, effectFn) => {
-	let destroy, depsCache;
-
-  const destroyEffect = () => {
-    destroy && destroy(depsCache);
-  }
-
-	const runEffect = () => {
-		destroyEffect();
-		depsCache = map(deps, (x) => flatten(x));
-		destroy = effectFn(depsCache);
-	};
-
-	return {
-    runEffect,
-    destroyEffect
-  };
-};
-
-const createState = (state = {}, options) => {
-	const { mutable, dispatcher } = Object.assign({}, stateDefaults, options);
-	const [ handler, subscribe ] = createObservable(false);
-	// const handler = (stateUpdate) => {
-	// 	if (stateUpdate !== state) {
-	// 		state = stateUpdate;
-	// 		message(state);
-	// 	}
-	// }
-	// const handler = message;
-	const stateProxy = createProxy(state, {
-		// dispatcher,
-		handler, mutable
-	});
-	const getState = () => stateProxy();
-	const setState = (stateUpdate) => {
-		if (isPrimitive(stateUpdate)) throw new Error(ERR_STATE_UPDATE);
-		return stateProxy(stateUpdate);
-	}
-	return {
-		$state: stateProxy,
-		getState,
-		setState,
-		subscribe
-	};
-};
-
-const produce = (...args) => {
-	const [ first, second ] = args;
-	if (args.length === 1 && isCallable(first)) {
-		return state => createProxy(state)(first)();
-	} else {
-		return createProxy(first)(second)()
-	}
-}
-
-const mutatorList = { pop: 0, shift: 0, push: 1, unshift: 1, splice: 0, reverse: 0, fill: 0, sort: 0 };
+const { isPrimitive, isObject, isCallable, copy, map, empty, each } = require('../utils');
+const { createObservable } = require('../observable');
+const { dispatcher } = require('../dispatcher')
 
 const apply = (fn) => fn();
 const applyToObjectKeys = (proxy) => (v, k) => isPrimitive(v) || proxy[k]();
+const mutatorList = { pop: 0, shift: 0, push: 1, unshift: 1, splice: 0, reverse: 0, fill: 0, sort: 0 };
 
-const subProxy = (subarray, prop, subproxies, { handler, mutable, dispatcher }) => {
+const subProxy = (subarray, prop, subproxies, { handler, mutable }) => {
 	if (!subproxies.hasOwnProperty(prop)) {
 		subproxies[prop] = createProxy(subarray, {
 			handler,
@@ -128,7 +27,7 @@ const stateGuard = (state, { mutable = false } = {}) => {
 	}
 };
 
-const createProxy = (record, { handler, mutable = false, dispatcher = {}} = {}) => {
+export const createProxy = (record, { handler, mutable = false } = {}) => {
 	let proxy,
 			subproxies = {},
 			state = stateGuard(record, { mutable });
@@ -156,7 +55,6 @@ const createProxy = (record, { handler, mutable = false, dispatcher = {}} = {}) 
 						? () => p
 						: p
 					: subProxy(p, prop, subproxies, {
-						dispatcher,
 						mutable,
 						handler: (record) => parent[prop] = record
 					});
@@ -189,9 +87,12 @@ const createProxy = (record, { handler, mutable = false, dispatcher = {}} = {}) 
 			}
 		},
 		apply: ( target, thisArg, args ) => {
-			if (dispatcher.isRenderMode) {
+
+			// dispatcher.renderInProgress && dispatcher.registerDep(subscribe);
+
+			// if (dispatcher.isRenderMode) {
         // dispatcher.renderTarget.unmountHandlers.push(subscribe(dispatcher.renderTarget.shouldUpdate));
-			}
+			// }
 			if (!args.length) {
 				Object.freeze(record);
         message(record);
@@ -224,14 +125,3 @@ const createProxy = (record, { handler, mutable = false, dispatcher = {}} = {}) 
 		}
 	});
 };
-
-module.exports = {
-  produce,
-	createEffect,
-	createValue,
-	createState,
-	createComputed,
-	createProxy,
-	stateGuard,
-	subProxy
-}

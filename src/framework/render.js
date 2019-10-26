@@ -1,6 +1,6 @@
 import { dispatcher } from './dispatcher';
 import { patch } from './patch';
-// import { createValue, createState, createComputed } from './state';
+// import { createValue, createState, createComputed } from './state/index';
 import { createObservable } from './observable';
 import { useEffect, useValue, useState, useComputed, useRef } from './hooks';
 import { eventHandler, updateAttr } from './attrs';
@@ -33,7 +33,7 @@ const createExpression = (fn) => {
   const destroy = () => {
     cancelUpdate && cancelUpdate(); // if called during an pending update, cancel it!
     destroyCache && destroyCache(); // TODO: This might need to be removed!
-    destroyObservableMessage();
+    cleanup();
     // instance.unsubscribeList.forEach(f => f());
   };
 
@@ -41,9 +41,12 @@ const createExpression = (fn) => {
     destroyCache = (destroyCache ? subscribeToDestroyOb : destroyUpdate)(destroyUpdate);
   }
 
-  const [ destroyObservableMessage, subscribeToDestroyOb ] = createObservable();
-  const update = ($parentUpdate) => {
-    cancelUpdate = false; // clears cancel update
+  const [ cleanup, subscribeToCleanup ] = createObservable();
+  const update = function ($parentUpdate) {
+    console.log({ $parentUpdate })
+    this && this();
+    console.log({ that: this })
+    // cancelUpdate = false; // clears cancel update
     if ($parentUpdate) $parent = $parentUpdate;
     const result = fn();
     if (result !== resultCache) {
@@ -59,22 +62,25 @@ const createExpression = (fn) => {
     updatesCache && updatesCache(); // this needs to go with new subscription system
   };
 
-  const scheduleUpdate = () => {
-    if (!cancelUpdate) {
-      cancelUpdate = dispatcher.scheduleUpdate(update); // puts the update into the dispatcher queue and return a cancel handler
-    }
-  };
-
-  const instance = {
-    unsubscribe: subscribeToDestroyOb,
-    unsubscribeList: [],
-    target: scheduleUpdate,
-    inProgress: true
-  };
-
-  dispatcher.render(instance);
+  // dispatcher.registerExpression(update, subscribeToCleanup)
+  // dispatcher.enderExpression(update)
   update();
-  instance.inProgress = false;
+
+  // const scheduleUpdate = () => {
+  //   if (!cancelUpdate) {
+  //     cancelUpdate = dispatcher.scheduleUpdate(update); // puts the update into the dispatcher queue and return a cancel handler
+  //   }
+  // };
+
+  // const instance = {
+  //   unsubscribe: subscribeToCleanup,
+    // unsubscribeList: [],
+  //   target: scheduleUpdate,
+  //   inProgress: true
+  // };
+
+  // dispatcher.render(instance);
+  // instance.inProgress = false;
 
   return [ elementCache, update, destroyCache ];
 };

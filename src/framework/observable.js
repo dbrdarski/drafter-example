@@ -22,7 +22,7 @@ export const createObservable = (emitOnEqualValues = true) => {
     if (emitOnEqualValues || msg !== valueCache) {
       if (dirty) {
         let newObserverList = [];
-        for (observers of observers) {
+        for (const observer of observers) {
           if (observer) {
             observer.fn( msg );
             observer.update(newObserverList)

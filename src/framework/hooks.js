@@ -1,4 +1,4 @@
-import { createValue, createState, createComputed, createEffect } from './state';
+import { createValue, createState, createComputed, createEffect } from './state/index';
 
 // export function hook(method, ...args) {
 //   console.log({ method, args })

@@ -1,4 +1,4 @@
-import { createState } from './state';
+import { createState } from './state/index';
 import { renderNode } from './render';
 import { patch } from './patch';
 import { $and, $or, $if } from './extras';
