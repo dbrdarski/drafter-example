@@ -117,13 +117,149 @@ parcelRequire = (function (modules, cache, entry, globalName) {
   }
 
   return newRequire;
-})({"src/framework/extras.js":[function(require,module,exports) {
+})({"src/framework/utils.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.curry = exports.logger = exports.each = exports.reduce = exports.map = exports.filter = exports.length = exports.copy = exports.empty = exports.pipe = exports.isCallable = exports.isObject = exports.isPrimitive = void 0;
+var _arguments = arguments;
+
+function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
+
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
+
+function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter); }
+
+function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
+
+var isPrimitive = function isPrimitive(val) {
+  return Object(val) !== val;
+};
+
+exports.isPrimitive = isPrimitive;
+
+var isObject = function isObject(val) {
+  return Object(val) === val;
+};
+
+exports.isObject = isObject;
+
+var isCallable = function isCallable(f) {
+  return typeof f === 'function';
+};
+
+exports.isCallable = isCallable;
+
+var pipe = function pipe() {
+  for (var _len = arguments.length, fns = new Array(_len), _key = 0; _key < _len; _key++) {
+    fns[_key] = arguments[_key];
+  }
+
+  return function (arg) {
+    return fns.reduce(function (acc, fn) {
+      return fn(acc);
+    }, arg);
+  };
+};
+
+exports.pipe = pipe;
+
+var empty = function empty(o) {
+  return o.constructor();
+};
+
+exports.empty = empty;
+
+var copy = function copy(o) {
+  return Object.assign(o.constructor(), o);
+};
+
+exports.copy = copy;
+
+var length = function length(o) {
+  return Object.keys(o).length;
+};
+
+exports.length = length;
+
+var filter = function filter(object, fn) {
+  return Object.keys(object).reduce(function (acc, key) {
+    if (fn(object[key], key, object)) {
+      acc[key] = object[key];
+    }
+
+    return acc;
+  }, {});
+};
+
+exports.filter = filter;
+
+var map = function map(object, fn) {
+  return Object.keys(object).reduce(function (acc, key) {
+    acc[key] = fn(object[key], key, object);
+    return acc;
+  }, {});
+};
+
+exports.map = map;
+
+var reduce = function reduce(object, fn, initial) {
+  return Object.keys(object).reduce(function (acc, key) {
+    acc[key] = fn(object[key], key, object);
+    return acc;
+  }, initial);
+};
+
+exports.reduce = reduce;
+
+var each = function each(object, fn) {
+  return Object.keys(object).forEach(function (key) {
+    fn(object[key], key, object);
+  });
+};
+
+exports.each = each;
+
+var logger = function logger() {
+  var log = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+  return function () {
+    for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+      args[_key2] = arguments[_key2];
+    }
+
+    if (args.length) {
+      log.push(args.length > 1 ? args : args[0]);
+    } else {
+      return log;
+    }
+  };
+};
+
+exports.logger = logger;
+
+var curry = function curry(f) {
+  return function () {
+    if (_arguments.length == f.length) {
+      // If arguments passed is sufficient then return value = f(arguments)
+      return f.apply(null, _arguments);
+    }
+
+    return curry(f.bind.apply(f, [null].concat(_toConsumableArray(_arguments))));
+  };
+};
+
+exports.curry = curry;
+},{}],"src/framework/extras.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.$gte = exports.$lte = exports.$gt = exports.$lt = exports.$mod = exports.$pow = exports.$divide = exports.$multiply = exports.$sub = exports.$add = exports.$eqw = exports.$eq = exports.$if = exports.$or = exports.$and = exports.$not = exports.flatten = void 0;
+
+var _utils = require("./utils");
 
 function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
 
@@ -159,9 +295,7 @@ var flat = function flat(fn) {
       args[_key] = arguments[_key];
     }
 
-    return args.any(function (arg) {
-      return typeof argument === 'function';
-    }) ? function () {
+    return args.any(_utils.isCallable) ? function () {
       return fn.apply(void 0, _toConsumableArray(args.map(flatten)));
     } : fn.apply(void 0, args);
   };
@@ -361,125 +495,7 @@ var $gte = flat(function (x, y) {
 // };
 
 exports.$gte = $gte;
-},{}],"src/framework/utils.js":[function(require,module,exports) {
-var _arguments = arguments;
-
-function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
-
-function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
-
-function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter); }
-
-function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
-
-var isPrimitive = function isPrimitive(val) {
-  return Object(val) !== val;
-};
-
-var isObject = function isObject(val) {
-  return Object(val) === val;
-};
-
-var isCallable = function isCallable(f) {
-  return typeof f === 'function';
-};
-
-var pipe = function pipe() {
-  for (var _len = arguments.length, fns = new Array(_len), _key = 0; _key < _len; _key++) {
-    fns[_key] = arguments[_key];
-  }
-
-  return function (arg) {
-    return fns.reduce(function (acc, fn) {
-      return fn(acc);
-    }, arg);
-  };
-};
-
-var empty = function empty(o) {
-  return o.constructor();
-};
-
-var copy = function copy(o) {
-  return Object.assign(o.constructor(), o);
-};
-
-var length = function length(o) {
-  return Object.keys(o).length;
-};
-
-var filter = function filter(object, fn) {
-  return Object.keys(object).reduce(function (acc, key) {
-    if (fn(object[key], key, object)) {
-      acc[key] = object[key];
-    }
-
-    return acc;
-  }, {});
-};
-
-var map = function map(object, fn) {
-  return Object.keys(object).reduce(function (acc, key) {
-    acc[key] = fn(object[key], key, object);
-    return acc;
-  }, {});
-};
-
-var reduce = function reduce(object, fn, initial) {
-  return Object.keys(object).reduce(function (acc, key) {
-    acc[key] = fn(object[key], key, object);
-    return acc;
-  }, initial);
-};
-
-var each = function each(object, fn) {
-  return Object.keys(object).forEach(function (key) {
-    fn(object[key], key, object);
-  });
-};
-
-var logger = function logger() {
-  var log = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
-  return function () {
-    for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-      args[_key2] = arguments[_key2];
-    }
-
-    if (args.length) {
-      log.push(args.length > 1 ? args : args[0]);
-    } else {
-      return log;
-    }
-  };
-};
-
-var curry = function curry(f) {
-  return function () {
-    if (_arguments.length == f.length) {
-      // If arguments passed is sufficient then return value = f(arguments)
-      return f.apply(null, _arguments);
-    }
-
-    return curry(f.bind.apply(f, [null].concat(_toConsumableArray(_arguments))));
-  };
-};
-
-module.exports = {
-  isPrimitive: isPrimitive,
-  isObject: isObject,
-  isCallable: isCallable,
-  pipe: pipe,
-  empty: empty,
-  copy: copy,
-  length: length,
-  filter: filter,
-  map: map,
-  reduce: reduce,
-  each: each,
-  logger: logger,
-  curry: curry
-};
-},{}],"src/framework/observable.js":[function(require,module,exports) {
+},{"./utils":"src/framework/utils.js"}],"src/framework/observable.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1157,6 +1173,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.patch = void 0;
 
+// patch is only used 3 times:
+// in mount, createElement and createExpression update
 var patch = function patch($parent, $new, $old) {
   var newList = Array.isArray($new);
   var oldList = Array.isArray($old);
@@ -1281,7 +1299,22 @@ function useRef(value) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.updateAttr = exports.eventHandler = void 0;
+exports.extendAttrs = exports.objectSpreadProxy = exports.arraySpreadProxy = exports.createAttrs = exports.updateAttr = exports.eventHandler = void 0;
+
+function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(source, true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(source).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
+
+function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
 var eventHandler = /^on[\w]+/g;
 exports.eventHandler = eventHandler;
 
@@ -1323,6 +1356,96 @@ var updateAttr = function updateAttr($el, k, value) {
 };
 
 exports.updateAttr = updateAttr;
+
+var createAttrs = function createAttrs(attrs, $el, updates) {
+  for (var _i = 0, _Object$entries = Object.entries(attrs); _i < _Object$entries.length; _i++) {
+    var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
+        k = _Object$entries$_i[0],
+        v = _Object$entries$_i[1];
+
+    if (k.match(eventHandler)) {
+      $el[k] = v;
+    } else if (typeof v === 'function') {
+      var update = updateAttr.bind(null, $el, k, v);
+      updates.push(update);
+      update();
+    } else if (v == null) {
+      $el.removeAttribute(k);
+    } else {
+      $el.setAttribute(k, v);
+    }
+  }
+};
+
+exports.createAttrs = createAttrs;
+
+var arraySpreadProxy = window.arraySpreadProxy = function (state) {
+  var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+      handler = _ref.handler;
+}; // if parent expression create destroy
+
+
+exports.arraySpreadProxy = arraySpreadProxy;
+
+var objectSpreadProxy = window.objectSpreadProxy = function (state) {
+  var _ref2 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+      handler = _ref2.handler;
+
+  var nulled = true;
+  var proxy = new Proxy(state, {
+    get: function get(target, prop, proxy) {
+      if (nulled) return null; // idea: if callibe intead of null return fn that removes attr and unsubscribes!!!!! :)
+
+      var value = state[prop];
+
+      if (value == null) {
+        // if value was reactive (fn) => unsubscribe
+        delete state[prop];
+      }
+
+      return value;
+    }
+  });
+  return function () {
+    var _Object$assign;
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    var newState = (_Object$assign = Object.assign).call.apply(_Object$assign, [null, {}].concat(args));
+
+    nulled = true;
+    Object.assign(state, proxy, newState);
+    nulled = false;
+    handler(_objectSpread({}, proxy));
+    return state;
+  }; // return update;
+  // return [ proxy, update ];
+}; // const attrSpreadExpression = (xs) => {
+//   let spreadCache = {};
+//   const update = () => {
+//     const spread = Object.assgin.apply(null, [{}, ...xs])
+//   }
+// }
+//
+
+
+exports.objectSpreadProxy = objectSpreadProxy;
+
+var extendAttrs = function extendAttrs() {
+  for (var _len2 = arguments.length, xs = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+    xs[_key2] = arguments[_key2];
+  }
+
+  return xs.any(isCallable) ? attrSpreadExpression(xs) : Object.assign.apply(null, xs);
+}; // staticAttr="1"
+// dynamicAttr={ x } // x = () =>
+// {...asd} // asd = {}
+// {...bsd} // bsd = () =>
+
+
+exports.extendAttrs = extendAttrs;
 },{}],"src/framework/render.js":[function(require,module,exports) {
 "use strict";
 
@@ -1494,22 +1617,8 @@ var createElement = function createElement(_ref) {
   var $el = document.createElement(tagName);
 
   if (attrs) {
-    for (var _i2 = 0, _Object$entries = Object.entries(attrs); _i2 < _Object$entries.length; _i2++) {
-      var _Object$entries$_i = _slicedToArray(_Object$entries[_i2], 2),
-          k = _Object$entries$_i[0],
-          v = _Object$entries$_i[1];
-
-      if (k.match(_attrs.eventHandler)) {
-        $el[k] = v;
-      } else if (typeof v === 'function') {
-        var _update = _attrs.updateAttr.bind(null, $el, k, v);
-
-        updates.push(_update);
-
-        _update();
-      } else {
-        $el.setAttribute(k, v);
-      }
+    if (typeof attrs === 'function') {} else {
+      (0, _attrs.createAttrs)(attrs, $el, updates);
     }
   }
 
@@ -1525,10 +1634,10 @@ var createElement = function createElement(_ref) {
         var _renderNode5 = renderNode(child),
             _renderNode6 = _slicedToArray(_renderNode5, 3),
             element = _renderNode6[0],
-            _update2 = _renderNode6[1],
+            _update = _renderNode6[1],
             destroyHandler = _renderNode6[2];
 
-        _update2 && updates.push(_update2);
+        _update && updates.push(_update);
         destroyHandler && destroyHandlers.push(destroyHandler); // update && update($el);
 
         (0, _patch.patch)($el, element);
@@ -1697,6 +1806,8 @@ exports.mount = mount;
 
 var _framework = require("./framework");
 
+function _extends() { _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }
+
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
 
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
@@ -1704,8 +1815,6 @@ function _nonIterableRest() { throw new TypeError("Invalid attempt to destructur
 function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
-
-function _extends() { _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }
 
 function _objectWithoutProperties(source, excluded) { if (source == null) return {}; var target = _objectWithoutPropertiesLoose(source, excluded); var key, i; if (Object.getOwnPropertySymbols) { var sourceSymbolKeys = Object.getOwnPropertySymbols(source); for (i = 0; i < sourceSymbolKeys.length; i++) { key = sourceSymbolKeys[i]; if (excluded.indexOf(key) >= 0) continue; if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue; target[key] = source[key]; } } return target; }
 
@@ -1724,13 +1833,34 @@ var Wrapper = function Wrapper(_ref) {
   }, children);
 };
 
-var UxInput = function UxInput(_ref2) {
-  var _ref2$attrs = _ref2.attrs,
-      name = _ref2$attrs.name,
-      label = _ref2$attrs.label,
-      placeholder = _ref2$attrs.placeholder,
-      type = _ref2$attrs.type,
-      rest = _objectWithoutProperties(_ref2$attrs, ["name", "label", "placeholder", "type"]);
+var MaybeWrap = function MaybeWrap(_ref2) {
+  var children = _ref2.children,
+      attrs = _ref2.attrs;
+  return function () {
+    return attrs.wrap() ? (0, _framework.h)("div", null, children) : children;
+  };
+};
+
+var UxInput = function UxInput(_ref3) {
+  var useValue = _ref3.useValue,
+      _ref3$attrs = _ref3.attrs,
+      name = _ref3$attrs.name,
+      label = _ref3$attrs.label,
+      placeholder = _ref3$attrs.placeholder,
+      oninput = _ref3$attrs.oninput,
+      type = _ref3$attrs.type,
+      rest = _objectWithoutProperties(_ref3$attrs, ["name", "label", "placeholder", "oninput", "type"]);
+
+  var _useValue = useValue(false),
+      _useValue2 = _slicedToArray(_useValue, 2),
+      init = _useValue2[0],
+      setInit = _useValue2[1];
+
+  var input = function input(e) {
+    setInit(true);
+    console.log(init());
+    oninput(e);
+  };
 
   console.log("Rendering <UxInput! />");
   return (0, _framework.h)("div", {
@@ -1741,19 +1871,25 @@ var UxInput = function UxInput(_ref2) {
     type: type || text,
     placeholder: placeholder || '',
     name: name,
-    id: name
+    id: name,
+    oninput: oninput,
+    style: function style() {
+      return {
+        background: init() ? '#eee' : '#fff'
+      };
+    }
   }, rest)));
 };
 
-var Timer = function Timer(_ref3) {
-  var useValue = _ref3.useValue,
-      useComputed = _ref3.useComputed,
-      useEffect = _ref3.useEffect;
+var Timer = function Timer(_ref4) {
+  var useValue = _ref4.useValue,
+      useComputed = _ref4.useComputed,
+      useEffect = _ref4.useEffect;
 
-  var _useValue = useValue(0),
-      _useValue2 = _slicedToArray(_useValue, 2),
-      counter = _useValue2[0],
-      setCounter = _useValue2[1];
+  var _useValue3 = useValue(0),
+      _useValue4 = _slicedToArray(_useValue3, 2),
+      counter = _useValue4[0],
+      setCounter = _useValue4[1];
 
   var increment = function increment() {
     setCounter(function (v) {
@@ -1763,8 +1899,8 @@ var Timer = function Timer(_ref3) {
 
   var counterDisplay = useComputed({
     counter: counter
-  }, function (_ref4) {
-    var counter = _ref4.counter;
+  }, function (_ref5) {
+    var counter = _ref5.counter;
     var reversed = String(counter).split('').reverse().join('');
     var sum = counter + Number(reversed);
     return "".concat(counter, " | ").concat(sum, " | ").concat(reversed);
@@ -1772,8 +1908,8 @@ var Timer = function Timer(_ref3) {
   var interval = setInterval(increment, 1000);
   useEffect({
     counter: counter
-  }, function (_ref5) {
-    var counter = _ref5.counter;
+  }, function (_ref6) {
+    var counter = _ref6.counter;
     document.title = "You clicked ".concat(counter, " times");
   });
   useEffect(false, function () {
@@ -1789,11 +1925,12 @@ var Timer = function Timer(_ref3) {
 };
 
 var Main = function Main() {
-  var _ref6 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-      attrs = _ref6.attrs,
-      useState = _ref6.useState,
-      useEffect = _ref6.useEffect,
-      useRef = _ref6.useRef;
+  var _ref7 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+      attrs = _ref7.attrs,
+      useValue = _ref7.useValue,
+      useState = _ref7.useState,
+      useEffect = _ref7.useEffect,
+      useRef = _ref7.useRef;
 
   var inputRef = useRef();
   console.log({
@@ -1810,6 +1947,11 @@ var Main = function Main() {
       state = _useState2[0],
       updateState = _useState2[1];
 
+  var _useValue5 = useValue(false),
+      _useValue6 = _slicedToArray(_useValue5, 2),
+      shouldWrap = _useValue6[0],
+      setWrap = _useValue6[1];
+
   window.state = state; // useEffect({
   //   counter
   // }, ({
@@ -1821,6 +1963,12 @@ var Main = function Main() {
 
   var toggleColorOptions = function toggleColorOptions(e) {
     return state.showColors = e.target.checked;
+  };
+
+  var toggleWrapper = function toggleWrapper(e) {
+    return setWrap(function (v) {
+      return !v;
+    });
   };
 
   var incrementClicks = function incrementClicks() {
@@ -1845,7 +1993,9 @@ var Main = function Main() {
   };
 
   console.log("Rendering <Main />");
-  return (0, _framework.h)("div", null, (0, _framework.h)(UxInput, {
+  return (0, _framework.h)("div", null, (0, _framework.h)(MaybeWrap, {
+    wrap: shouldWrap
+  }, (0, _framework.h)(UxInput, {
     type: "text",
     name: "name",
     ref: inputRef,
@@ -1854,7 +2004,7 @@ var Main = function Main() {
       return state.name;
     },
     oninput: updateName
-  }), (0, _framework.h)("p", null, "Hello ", function () {
+  })), (0, _framework.h)("p", null, "Hello ", function () {
     return state.name || 'John Doe';
   }, "! You have clicked ", function () {
     return state.count;
@@ -1866,6 +2016,10 @@ var Main = function Main() {
     style: buttonStyle,
     onclick: incrementClicks
   }, " Increment! "), (0, _framework.h)("p", null, (0, _framework.h)("label", null, (0, _framework.h)("input", {
+    type: "checkbox",
+    checked: shouldWrap,
+    oninput: toggleWrapper
+  }), "Should wrap"), (0, _framework.h)("label", null, (0, _framework.h)("input", {
     type: "checkbox",
     checked: function checked() {
       return state.showColors;
@@ -1898,6 +2052,7 @@ console.time();
 })), document.body); // mount(<Test />, document.body);
 
 console.timeEnd();
+window.vnode = (0, _framework.h)("div", null, (0, _framework.h)("h2", null, "Dane"), (0, _framework.h)("p", null, "motherfuckers"));
 },{"./framework":"src/framework/index.js"}],"C:/Users/dane/AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
@@ -1926,7 +2081,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "65389" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "50091" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

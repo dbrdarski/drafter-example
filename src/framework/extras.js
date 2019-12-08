@@ -1,3 +1,4 @@
+import { isCallable } from './utils'
 const map = (arr, fn) => {
   let cacheArr, result;
   return () => {
@@ -12,7 +13,7 @@ const map = (arr, fn) => {
 
 export const flatten = (v, args) => typeof v === 'function' ? v.apply(null, args) : v;
 const flat = (fn) => (...args) => {
-  return args.any(arg => typeof argument === 'function')
+  return args.any(isCallable)
     ? () => fn(...args.map(flatten))
     : fn(...args)
 }

@@ -7,11 +7,25 @@ const Wrapper = ({ children }) => {
       { children }
     </div>
   );
-}
+};
+
+const MaybeWrap = ({ children, attrs }) => {
+  return () => attrs.wrap() ? (
+    <div>{ children }</div>
+  ) : children
+};
 
 const UxInput = ({
-  attrs: { name, label, placeholder, type, ...rest }
+  useValue,
+  attrs: { name, label, placeholder, oninput, type, ...rest }
 }) => {
+  const [ init, setInit ] = useValue(false)
+  const input = (e) => {
+    setInit(true)
+    console.log(init())
+    oninput(e);
+  }
+
   console.log("Rendering <UxInput! />")
   return (
     <div class="uxInput">
@@ -22,6 +36,8 @@ const UxInput = ({
         placeholder={placeholder || ''}
         name={name}
         id={name}
+        oninput={oninput}
+        style={() => ({ background: init() ? '#eee' : '#fff'})}
         {...rest}
       />
     </div>
@@ -59,15 +75,17 @@ const Timer = ({ useValue, useComputed, useEffect }) => {
   );
 };
 
-const Main = ({ attrs, useState, useEffect, useRef } = {}) => {
+const Main = ({ attrs, useValue, useState, useEffect, useRef } = {}) => {
   const inputRef = useRef();
   console.log({ inputRef })
   const [ state, updateState ] = useState({
     name: '',
     count: 0,
     color: 'green',
-    showColors: true
+    showColors: true,
   });
+
+  const [ shouldWrap, setWrap ] = useValue(false);
 
   window.state = state;
 
@@ -80,6 +98,7 @@ const Main = ({ attrs, useState, useEffect, useRef } = {}) => {
   // });
   //
   const toggleColorOptions = (e) => state.showColors = e.target.checked;
+  const toggleWrapper = (e) => setWrap(v => !v);
   const incrementClicks = () => {
     inputRef().focus();
     state.count++;
@@ -97,14 +116,16 @@ const Main = ({ attrs, useState, useEffect, useRef } = {}) => {
 
   return (
     <div>
-      <UxInput
-        type="text"
-        name="name"
-        ref={inputRef}
-        label="Your name"
-        value={() => state.name}
-        oninput={updateName}
-      />
+      <MaybeWrap wrap={shouldWrap}>
+        <UxInput
+          type="text"
+          name="name"
+          ref={inputRef}
+          label="Your name"
+          value={() => state.name}
+          oninput={updateName}
+        />
+      </MaybeWrap>
       <p>
         Hello { () => state.name || 'John Doe' }! You have clicked { () => state.count } time{ () => state.count !== 1 ? 's' : ''} on the {() => state.color} button.
       </p>
@@ -113,6 +134,10 @@ const Main = ({ attrs, useState, useEffect, useRef } = {}) => {
         onclick={incrementClicks}
       > Increment! </button>
       <p>
+      <label>
+        <input type="checkbox" checked={shouldWrap} oninput={ toggleWrapper }/>
+        Should wrap
+      </label>
         <label>
           <input type="checkbox" checked={() => state.showColors} oninput={ toggleColorOptions }/>
           Show color options
@@ -150,3 +175,11 @@ mount(<Wrapper>
 </Wrapper>, document.body);
 // mount(<Test />, document.body);
 console.timeEnd()
+
+
+window.vnode = (
+  <div>
+    <h2>Dane</h2>
+    <p>motherfuckers</p>
+  </div>
+);

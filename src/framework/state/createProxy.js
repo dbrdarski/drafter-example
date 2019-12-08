@@ -86,7 +86,7 @@ export const createProxy = (record, { handler, mutable = false } = {}) => {
 				// handler && handler(record);
 			}
 		},
-		apply: ( target, thisArg, args ) => {
+		apply: (target, thisArg, args) => {
 
 			// dispatcher.renderInProgress && dispatcher.registerDep(subscribe);
 

@@ -3,7 +3,7 @@ import { patch } from './patch';
 // import { createValue, createState, createComputed } from './state/index';
 import { createObservable } from './observable';
 import { useEffect, useValue, useState, useComputed, useRef } from './hooks';
-import { eventHandler, updateAttr } from './attrs';
+import { eventHandler, createAttrs, objectSpreadProxy } from './attrs';
 
 export const renderNode = (vNode) => {
   const type = typeof vNode;
@@ -115,16 +115,10 @@ const createElement = ({ tagName, attrs, children }) => {
   const $el = document.createElement(tagName);
 
   if (attrs) {
-    for (const [k, v] of Object.entries(attrs)) {
-      if (k.match(eventHandler)) {
-        $el[k] = v;
-      } else if (typeof v === 'function') {
-        const update = updateAttr.bind(null, $el, k, v);
-        updates.push(update);
-        update();
-      } else {
-        $el.setAttribute(k, v);
-      }
+    if (typeof attrs === 'function') {
+
+    } else {
+      createAttrs(attrs, $el, updates)
     }
   }
 

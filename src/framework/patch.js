@@ -1,3 +1,6 @@
+// patch is only used 3 times:
+// in mount, createElement and createExpression update
+
 export const patch = ($parent, $new, $old) => {
   const newList = Array.isArray($new);
   const oldList = Array.isArray($old);
