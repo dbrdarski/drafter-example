@@ -12,8 +12,9 @@ const map = (arr, fn) => {
 };
 
 export const flatten = (v, args) => typeof v === 'function' ? v.apply(null, args) : v;
+
 const flat = (fn) => (...args) => {
-  return args.any(isCallable)
+  return args.some(isCallable)
     ? () => fn(...args.map(flatten))
     : fn(...args)
 }

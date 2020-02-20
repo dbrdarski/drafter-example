@@ -15,7 +15,7 @@ export const renderNode = (vNode) => {
     return createExpression(vNode);
   } else if (Array.isArray(vNode)) {
     return createFragment(vNode);
-  } else if (typeof vNode.tagName === 'function'){
+  } else if (typeof vNode.tagName === 'function') {
     return createComponent(vNode);
   }
   return createElement(vNode);
