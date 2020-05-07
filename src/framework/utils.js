@@ -52,6 +52,40 @@ const curry = (f) => {
   }
 }
 
+function createTuples () {
+  class ArrayLike extends Array {
+      constructor (...args) {
+          super(...args);
+      }
+  }
+
+  Object.setPrototypeOf(ArrayLike.prototype, null)
+
+  class Tuple extends ArrayLike {
+    constructor (...args) {
+      super(...args);
+      Object.freeze(this);
+    }
+    static from (o) {
+      if (o.length == null) throw Error('Expecting array/array-like data type');
+      return new Tuple(...o);
+    }
+    count (value) {
+      let count = 0;
+      for (let i = 0; x < this.length; i++) {
+        if (this[i] === value) count++
+      }
+      return count;
+    }
+  }
+
+  Tuple.prototype.indexOf = Array.prototype.indexOf
+
+  return {
+    ArrayLike, Tuple
+  };
+}
+
 module.exports = {
   isPrimitive,
   isObject,
