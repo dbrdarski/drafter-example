@@ -120,13 +120,17 @@ parcelRequire = (function (modules, cache, entry, globalName) {
 })({"../drafter/src/utils.js":[function(require,module,exports) {
 var _arguments = arguments;
 
-function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
+function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
 
-function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 
-function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter); }
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
 
-function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
+function _iterableToArray(iter) { if (typeof Symbol !== "undefined" && Symbol.iterator in Object(iter)) return Array.from(iter); }
+
+function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) return _arrayLikeToArray(arr); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
 
 var isPrimitive = function isPrimitive(val) {
   return Object(val) !== val;
@@ -241,9 +245,15 @@ module.exports = {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.createObservable = void 0;
+exports.createObservable = exports.createObservable2 = void 0;
 
-var createObservable = function createObservable() {
+function _createForOfIteratorHelper(o) { if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (o = _unsupportedIterableToArray(o))) { var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var it, normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it.return != null) it.return(); } finally { if (didErr) throw err; } } }; }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+var createObservable2 = function createObservable2() {
   var observers = [];
 
   var subscribe = function subscribe(fn) {
@@ -274,19 +284,89 @@ var createObservable = function createObservable() {
   };
 };
 
+exports.createObservable2 = createObservable2;
+
+var createObservable = function createObservable() {
+  var dirty = false;
+  var observers = [];
+
+  var subscribe = function subscribe(fn) {
+    if (fn == null) {
+      debugger;
+    }
+
+    var position = observers.length; // let observerList = observers;
+
+    var update = function update(newObserverList) {
+      position = newObserverList.length;
+      newObserverList.push(item);
+    };
+
+    var item = {
+      fn: fn,
+      update: update
+    };
+    update(observers);
+    return function () {
+      observers[position] = false;
+      dirty = true;
+    };
+  };
+
+  var message = function message(msg) {
+    if (dirty) {
+      var newObserverList = [];
+
+      var _iterator = _createForOfIteratorHelper(observers),
+          _step;
+
+      try {
+        for (_iterator.s(); !(_step = _iterator.n()).done;) {
+          observers = _step.value;
+
+          if (observer) {
+            observer.fn(msg);
+            observer.update(newObserverList);
+          }
+        }
+      } catch (err) {
+        _iterator.e(err);
+      } finally {
+        _iterator.f();
+      }
+
+      observers = newObserverList;
+      dirty = false;
+    } else {
+      observers.forEach(function (o) {
+        return o.fn(msg);
+      });
+    }
+  };
+
+  return {
+    subscribe: subscribe,
+    message: message
+  };
+};
+
 exports.createObservable = createObservable;
 },{}],"../drafter/src/state.js":[function(require,module,exports) {
-function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
 
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 
-function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _iterableToArrayLimit(arr, i) { if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return; var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
 
-function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(source, true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(source).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
@@ -314,16 +394,25 @@ var createState = function createState() {
   var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
   var options = arguments.length > 1 ? arguments[1] : undefined;
 
-  var _stateDefaults$option = _objectSpread({}, stateDefaults, {}, options),
-      mutable = _stateDefaults$option.mutable;
+  var _stateDefaults$option = _objectSpread(_objectSpread({}, stateDefaults), options),
+      mutable = _stateDefaults$option.mutable,
+      env = _stateDefaults$option.env;
 
   var _createObservable = createObservable(),
       message = _createObservable.message,
       subscribe = _createObservable.subscribe,
       unsubscribe = _createObservable.unsubscribe;
 
+  var handler = function handler(stateUpdate) {
+    if (stateUpdate !== state) {
+      state = stateUpdate;
+      message(state);
+    }
+  };
+
   var stateProxy = createProxy(state, {
-    message: message,
+    // env,
+    handler: handler,
     mutable: mutable
   });
 
@@ -345,20 +434,21 @@ var createState = function createState() {
   };
 };
 
-var stateGuard = function stateGuard(state) {
-  var _ref = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-      _ref$mutable = _ref.mutable,
-      mutable = _ref$mutable === void 0 ? false : _ref$mutable;
+var produce = function produce() {
+  for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+    args[_key] = arguments[_key];
+  }
 
-  var dirty = false;
-  return function () {
-    if (mutable && dirty) {
-      return state;
-    }
+  var first = args[0],
+      second = args[1];
 
-    dirty = mutable;
-    return state = copy(state);
-  };
+  if (args.length === 1 && isCallable(first)) {
+    return function (state) {
+      return createProxy(state)(first)();
+    };
+  } else {
+    return createProxy(first)(second)();
+  }
 };
 
 var mutatorList = {
@@ -382,13 +472,14 @@ var applyToObjectKeys = function applyToObjectKeys(proxy) {
   };
 };
 
-var subProxy = function subProxy(subarray, prop, subproxies, _ref2) {
-  var message = _ref2.message,
-      mutable = _ref2.mutable;
+var subProxy = function subProxy(subarray, prop, subproxies, _ref) {
+  var handler = _ref.handler,
+      mutable = _ref.mutable,
+      env = _ref.env;
 
   if (!subproxies.hasOwnProperty(prop)) {
     subproxies[prop] = createProxy(subarray, {
-      message: message,
+      handler: handler,
       mutable: mutable
     });
   }
@@ -396,28 +487,29 @@ var subProxy = function subProxy(subarray, prop, subproxies, _ref2) {
   return subproxies[prop];
 };
 
-var produce = function produce() {
-  for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-    args[_key] = arguments[_key];
-  }
+var stateGuard = function stateGuard(state) {
+  var _ref2 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
+      _ref2$mutable = _ref2.mutable,
+      mutable = _ref2$mutable === void 0 ? false : _ref2$mutable;
 
-  var first = args[0],
-      second = args[1];
+  var dirty = false;
+  return function () {
+    if (mutable && dirty) {
+      return state;
+    }
 
-  if (args.length === 1 && isCallable(first)) {
-    return function (state) {
-      return createProxy(state)(first)();
-    };
-  } else {
-    return createProxy(first)(second)();
-  }
+    dirty = mutable;
+    return state = copy(state);
+  };
 };
 
 var createProxy = function createProxy(record) {
   var _ref3 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {},
-      message = _ref3.message,
+      handler = _ref3.handler,
       _ref3$mutable = _ref3.mutable,
-      mutable = _ref3$mutable === void 0 ? false : _ref3$mutable;
+      mutable = _ref3$mutable === void 0 ? false : _ref3$mutable,
+      _ref3$env = _ref3.env,
+      env = _ref3$env === void 0 ? {} : _ref3$env;
 
   var proxy,
       subproxies = {},
@@ -442,9 +534,12 @@ var createProxy = function createProxy(record) {
     get: function get(target, prop, parent) {
       if (record.hasOwnProperty(prop)) {
         var p = record[prop];
-        return isPrimitive(p) ? p : subProxy(p, prop, subproxies, {
+        return isPrimitive(p) ? env.isRenderMode ? function () {
+          return p;
+        } : p : subProxy(p, prop, subproxies, {
+          env: env,
           mutable: mutable,
-          message: function message(record) {
+          handler: function handler(record) {
             return parent[prop] = record;
           }
         });
@@ -457,10 +552,10 @@ var createProxy = function createProxy(record) {
     set: function set(target, prop, value) {
       if (!record.hasOwnProperty(prop) || record[prop] !== value) {
         record = state();
-        record[prop] = value;
-        delete subproxies[prop]; // mutable ||
+        record[prop] = value; // delete subproxies[prop];
+        // mutable ||
 
-        message && message(record);
+        handler && handler(record);
       }
 
       return true;
@@ -471,13 +566,15 @@ var createProxy = function createProxy(record) {
         delete record[prop];
         delete subproxies[prop]; // mutable ||
 
-        message && message(record);
+        handler && handler(record);
       }
     },
     apply: function apply(target, thisArg, args) {
+      if (env.isRenderMode) {}
+
       if (!args.length) {
         Object.freeze(record);
-        message && message(record);
+        handler && handler(record);
 
         if (mutable) {
           state = stateGuard(record);
@@ -499,7 +596,7 @@ var createProxy = function createProxy(record) {
           state = stateGuard(record, {
             mutable: mutable
           });
-          message && message(record);
+          handler && handler(record);
           return proxy;
         } else if (isObject(stateUpdate)) {
           var _p = createProxy(record, {
@@ -511,7 +608,7 @@ var createProxy = function createProxy(record) {
           state = stateGuard(record, {
             mutable: mutable
           });
-          message && message(record);
+          handler && handler(record);
           return proxy;
         }
       }
@@ -581,7 +678,7 @@ var _dispatch = require("./dispatch");
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
 
-function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(source, true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(source).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; if (i % 2) { ownKeys(Object(source), true).forEach(function (key) { _defineProperty(target, key, source[key]); }); } else if (Object.getOwnPropertyDescriptors) { Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)); } else { ownKeys(Object(source)).forEach(function (key) { Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)); }); } } return target; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
@@ -663,7 +760,7 @@ var Store = function Store(name, _ref) {
     unsubscribe: unsubscribe,
     getState: getState
   });
-  Object.defineProperties(Store, _objectSpread({}, $methods, {
+  Object.defineProperties(Store, _objectSpread(_objectSpread({}, $methods), {}, {
     name: {
       value: name,
       enumerable: false
@@ -829,13 +926,19 @@ var _component = require("./component");
 
 var _dispatch = require("./dispatch");
 
-function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
-function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
+function _createForOfIteratorHelper(o) { if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (o = _unsupportedIterableToArray(o))) { var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e2) { throw _e2; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var it, normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e3) { didErr = true; err = _e3; }, f: function f() { try { if (!normalCompletion && it.return != null) it.return(); } finally { if (didErr) throw err; } } }; }
 
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
 
-function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _iterableToArrayLimit(arr, i) { if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return; var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
@@ -869,29 +972,19 @@ var createDOMElement = function createDOMElement(vNode) {
     $el.setAttribute(k, v);
   }
 
-  var _iteratorNormalCompletion = true;
-  var _didIteratorError = false;
-  var _iteratorError = undefined;
+  var _iterator = _createForOfIteratorHelper(children),
+      _step;
 
   try {
-    for (var _iterator = children[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+    for (_iterator.s(); !(_step = _iterator.n()).done;) {
       var child = _step.value;
       var $child = createDOM(child);
       $el.appendChild($child);
     }
   } catch (err) {
-    _didIteratorError = true;
-    _iteratorError = err;
+    _iterator.e(err);
   } finally {
-    try {
-      if (!_iteratorNormalCompletion && _iterator.return != null) {
-        _iterator.return();
-      }
-    } finally {
-      if (_didIteratorError) {
-        throw _iteratorError;
-      }
-    }
+    _iterator.f();
   }
 
   vNode.instance = $el;
@@ -1001,9 +1094,18 @@ var diffAttrs = function diffAttrs(oldAttrs, newAttrs) {
   }
 
   return function ($node) {
-    for (var _i4 = 0, _patches = patches; _i4 < _patches.length; _i4++) {
-      var patch = _patches[_i4];
-      patch($node);
+    var _iterator2 = _createForOfIteratorHelper(patches),
+        _step2;
+
+    try {
+      for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+        var patch = _step2.value;
+        patch($node);
+      }
+    } catch (err) {
+      _iterator2.e(err);
+    } finally {
+      _iterator2.f();
     }
   };
 };
@@ -1020,41 +1122,32 @@ var zip = function zip(xs, ys) {
 
 var diffChildren = function diffChildren(oldChildren, newChildren) {
   var patches = [];
-  var _iteratorNormalCompletion2 = true;
-  var _didIteratorError2 = false;
-  var _iteratorError2 = undefined;
+
+  var _iterator3 = _createForOfIteratorHelper(zip(oldChildren, newChildren)),
+      _step3;
 
   try {
-    for (var _iterator2 = zip(oldChildren, newChildren)[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-      var _step2$value = _slicedToArray(_step2.value, 2),
-          oldChild = _step2$value[0],
-          newChild = _step2$value[1];
+    for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+      var _step3$value = _slicedToArray(_step3.value, 2),
+          oldChild = _step3$value[0],
+          newChild = _step3$value[1];
 
       patches.push(diff(oldChild, newChild));
     }
   } catch (err) {
-    _didIteratorError2 = true;
-    _iteratorError2 = err;
+    _iterator3.e(err);
   } finally {
-    try {
-      if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
-        _iterator2.return();
-      }
-    } finally {
-      if (_didIteratorError2) {
-        throw _iteratorError2;
-      }
-    }
+    _iterator3.f();
   }
 
   var additionalPatches = [];
-  var _iteratorNormalCompletion3 = true;
-  var _didIteratorError3 = false;
-  var _iteratorError3 = undefined;
+
+  var _iterator4 = _createForOfIteratorHelper(newChildren.slice(oldChildren.length)),
+      _step4;
 
   try {
     var _loop3 = function _loop3() {
-      var additionalChild = _step3.value;
+      var additionalChild = _step4.value;
       additionalPatches.push(function ($node) {
         $node.appendChild(createDOM(additionalChild));
       });
@@ -1063,53 +1156,34 @@ var diffChildren = function diffChildren(oldChildren, newChildren) {
       };
     };
 
-    for (var _iterator3 = newChildren.slice(oldChildren.length)[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+    for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
       var _ret = _loop3();
 
       if (_typeof(_ret) === "object") return _ret.v;
     }
   } catch (err) {
-    _didIteratorError3 = true;
-    _iteratorError3 = err;
+    _iterator4.e(err);
   } finally {
-    try {
-      if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
-        _iterator3.return();
-      }
-    } finally {
-      if (_didIteratorError3) {
-        throw _iteratorError3;
-      }
-    }
+    _iterator4.f();
   }
 
   return function (parent) {
-    var _iteratorNormalCompletion4 = true;
-    var _didIteratorError4 = false;
-    var _iteratorError4 = undefined;
+    var _iterator5 = _createForOfIteratorHelper(zip(patches, parent.childNodes)),
+        _step5;
 
     try {
-      for (var _iterator4 = zip(patches, parent.childNodes)[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-        var _step4$value = _slicedToArray(_step4.value, 2),
-            patch = _step4$value[0],
-            child = _step4$value[1];
+      for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+        var _step5$value = _slicedToArray(_step5.value, 2),
+            patch = _step5$value[0],
+            child = _step5$value[1];
 
         patch(child);
         return parent;
       }
     } catch (err) {
-      _didIteratorError4 = true;
-      _iteratorError4 = err;
+      _iterator5.e(err);
     } finally {
-      try {
-        if (!_iteratorNormalCompletion4 && _iterator4.return != null) {
-          _iterator4.return();
-        }
-      } finally {
-        if (_didIteratorError4) {
-          throw _iteratorError4;
-        }
-      }
+      _iterator5.f();
     }
   };
 };
@@ -1255,6 +1329,8 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 // (new VAT).subscribe((data) => {
 //   console.log("VAT_SUBSCRIBE_FN", data)}
 // )
+window.createState = _state.createState;
+
 var createVApp = function createVApp(count) {
   return (0, _vdom.createElement)('div', {
     id: 'app'
@@ -1282,9 +1358,8 @@ var App = function App(_ref) {
       src: 'https://media.giphy.com/media/hqfUzrSYHUMLmRaMNQ/giphy.gif'
     }));
   };
-};
-
-(0, _vdom.mount)((0, _vdom.createElement)(App), document.getElementById('app')); // let count = 0;
+}; // mount(createElement(App), document.getElementById('app'));
+// let count = 0;
 // let vApp = createVApp(count);
 // const $app = createDOM(vApp);
 // let $rootEl = mount($app, document.getElementById('app'));
@@ -1295,6 +1370,7 @@ var App = function App(_ref) {
 //   $rootEl = patch($rootEl);
 //   vApp = vNewApp;
 // }, 1000);
+
 
 window.VAT = _VAT.default; // window.Vat = new VAT;
 // window.Vat2 = new VAT(mapper);
@@ -1331,7 +1407,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "50660" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "55367" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
@@ -1362,8 +1438,9 @@ if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
         assetsToAccept.forEach(function (v) {
           hmrAcceptRun(v[0], v[1]);
         });
-      } else {
-        window.location.reload();
+      } else if (location.reload) {
+        // `location` global exists in a web worker context but lacks `.reload()` function.
+        location.reload();
       }
     }
 
