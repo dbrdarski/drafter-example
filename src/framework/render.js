@@ -4,6 +4,10 @@ import { patch } from './patch';
 import { createObservable } from './observable';
 import { useEffect, useValue, useState, useComputed, useRef } from './hooks';
 import { eventHandler, updateAttr } from './attrs';
+import { scheduler } from './scheduler'
+import Walker from './walker'
+
+const updatesWalker = new Walker;
 
 export const renderNode = (vNode) => {
   const type = typeof vNode;
@@ -27,6 +31,7 @@ const createTextNode = (text) => [ document.createTextNode(text), false ];
 
 const createExpression = (fn) => {
   let resultCache, elementCache, updatesCache, destroyCache;
+  const schedule = scheduler(updatesWalker.current);
   const destroy = () => {
     destroyCache && destroyCache();
   };
@@ -34,17 +39,19 @@ const createExpression = (fn) => {
     const result = fn();
 
     if (result !== resultCache) {
-      const [ element, updates, destroyUpdate ] = renderNode(result);
+      const [ element, updates, destroyUpdate ] = renderNode(result); // computed
       destroy();
       destroyCache = destroyUpdate;
-      $parent && patch($parent, element, elementCache);
+      $parent && schedule(patch.bind(this, $parent, element, elementCache);
       elementCache = element;
       resultCache = result;
       updatesCache = updates;
     }
     updatesCache && updatesCache();
   };
+  const stepOut = updatesWalker.stepIn(schedule);
   update();
+  stepOut();
   return [ elementCache, update, destroy ];
 };
 
@@ -52,6 +59,7 @@ const createFragment = (vNodes) => {
   const $elements = [];
   const updates = [];
   const destroyHandlers = [];
+
   vNodes.forEach(vNode => {
     // const [ $el ] = renderNode(vNode);
     const [ $el, update, destroy ] = renderNode(vNode);
@@ -59,6 +67,8 @@ const createFragment = (vNodes) => {
     update && updates.push(update);
     destroy && destroyHandlers.push(destroy);
   });
+
+  // Do we need fragments as function (reactive getter????)
 
   const update = ($parent) => {
     updates.forEach(update => update($parent));
@@ -72,7 +82,9 @@ const createFragment = (vNodes) => {
 }
 
 const createElement = ({ tagName, attrs, children }) => {
-  const updates = [];
+  // const updates = [];
+  const schedule = scheduler(updatesWalker.current);
+
   const destroyHandlers = [];
 
   const $el = document.createElement(tagName);
@@ -83,7 +95,8 @@ const createElement = ({ tagName, attrs, children }) => {
         $el[k] = v;
       } else if (typeof v === 'function') {
         const update = updateAttr.bind(null, $el, k, v);
-        updates.push(update);
+        // updates.push(update);
+        v.subscribe(schedule.bind(null, update)); // this won't work with v.subscribe
         update();
       } else {
         $el.setAttribute(k, v);
@@ -93,17 +106,22 @@ const createElement = ({ tagName, attrs, children }) => {
 
   if (children) {
     for (const child of children) {
+      const stepOut = updatesWalker.stepIn(schedule)
       const [ element, update, destroyHandler ] = renderNode(child);
-      update && updates.push(update);
+      stepOut();
+      // update && updates.push(update);
+
+      // no updates needed due to walker and the fact we dont support
+      // children expression (we achieve the same with fragments)
       destroyHandler && destroyHandlers.push(destroyHandler);
       // update && update($el);
       patch($el, element);
     }
   }
 
-  const update = () => {
-    updates.forEach(update => update($el))
-  };
+  // const update = () => {
+  //   updates.forEach(update => update($el))
+  // };
 
   const destroy = () => {
     destroyHandlers.forEach(fn => fn())
@@ -113,6 +131,7 @@ const createElement = ({ tagName, attrs, children }) => {
 }
 
 const createComponent = ({ tagName: component, attrs, children }) => {
+  const schedule = scheduler(updatesWalker.current)
   const unsubscribeList = [];
   const updateObservable = createObservable();
   const destroyObservable = createObservable();

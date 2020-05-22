@@ -9,7 +9,7 @@ const { env } = require('./env')
 
 const ERR_STATE_UPDATE = 'State update argument must either be an Object/Array or an update function.';
 
-const stateDefaults = { mutable: false, };
+const stateDefaults = { mutable: false };
 
 const createValue = (value) => {
 	const { message, subscribe } = createObservable();
