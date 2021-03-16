@@ -321,7 +321,7 @@ function createTuples() {
       value: function count(value) {
         var count = 0;
 
-        for (var i = 0; x < this.length; i++) {
+        for (var i = 0; i < this.length; i++) {
           if (this[i] === value) count++;
         }
 
@@ -1214,13 +1214,89 @@ var updateAttr = function updateAttr($el, k, value) {
 };
 
 exports.updateAttr = updateAttr;
+},{}],"src/framework/scheduler.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.scheduler = void 0;
+
+var scheduler = function scheduler(subscribeToParent) {
+  var scheduled = false;
+  var queue = [];
+
+  var run = function run() {
+    queue.forEach(function (task) {
+      task();
+    });
+    queue.length = 0;
+    scheduled = false;
+  };
+
+  return function schedule(task) {
+    scheduled || subscribeToParent(run);
+    queue.push(task);
+  };
+};
+
+exports.scheduler = scheduler;
+},{}],"src/framework/walker.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+// function walkerContext () {
+//   let parent, current = null;
+//   const walker = { parent, current };
+//   const run =
+//   function stepIn (context) {
+//     const cache = parent;
+//     parent = curent;
+//     current = context;
+//     return stepOut.bind(cache);
+//   }
+// }
+function stepOut(cache) {
+  this.current = cache;
+}
+
+var Walker = /*#__PURE__*/function () {
+  function Walker() {
+    _classCallCheck(this, Walker);
+
+    this.current = null;
+  }
+
+  _createClass(Walker, [{
+    key: "stepIn",
+    value: function stepIn(context) {
+      var cache = this.current;
+      this.current = context;
+      return stepOut.bind(this, cache);
+    }
+  }]);
+
+  return Walker;
+}();
+
+exports.default = Walker;
 },{}],"src/framework/render.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.renderNode = void 0;
+exports.renderNode = exports.mount = void 0;
 
 var _env = require("./env");
 
@@ -1232,6 +1308,16 @@ var _hooks = require("./hooks");
 
 var _attrs = require("./attrs");
 
+var _scheduler = require("./scheduler");
+
+var _walker = _interopRequireDefault(require("./walker"));
+
+var _this = void 0;
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
 
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
@@ -1240,7 +1326,21 @@ function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) ||
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
-function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+var updatesWalker = new _walker.default();
+
+var mount = function mount(hdom, $target) {
+  var _renderNode = renderNode(hdom),
+      _renderNode2 = _slicedToArray(_renderNode, 2),
+      $el = _renderNode2[0],
+      update = _renderNode2[1];
+
+  window.update = update;
+  update($target); // this wasn't needed before ?
+
+  (0, _patch.patch)($target, $el);
+};
+
+exports.mount = mount;
 
 var renderNode = function renderNode(vNode) {
   var type = _typeof(vNode);
@@ -1272,6 +1372,7 @@ var createTextNode = function createTextNode(text) {
 
 var createExpression = function createExpression(fn) {
   var resultCache, elementCache, updatesCache, destroyCache;
+  var schedule = (0, _scheduler.scheduler)(updatesWalker.current);
 
   var destroy = function destroy() {
     destroyCache && destroyCache();
@@ -1281,15 +1382,16 @@ var createExpression = function createExpression(fn) {
     var result = fn();
 
     if (result !== resultCache) {
-      var _renderNode = renderNode(result),
-          _renderNode2 = _slicedToArray(_renderNode, 3),
-          element = _renderNode2[0],
-          updates = _renderNode2[1],
-          destroyUpdate = _renderNode2[2];
+      var _renderNode3 = renderNode(result),
+          _renderNode4 = _slicedToArray(_renderNode3, 3),
+          element = _renderNode4[0],
+          updates = _renderNode4[1],
+          destroyUpdate = _renderNode4[2]; // computed
+
 
       destroy();
       destroyCache = destroyUpdate;
-      $parent && (0, _patch.patch)($parent, element, elementCache);
+      $parent && schedule(_patch.patch.bind(_this, $parent, element, elementCache));
       elementCache = element;
       resultCache = result;
       updatesCache = updates;
@@ -1298,7 +1400,9 @@ var createExpression = function createExpression(fn) {
     updatesCache && updatesCache();
   };
 
+  var stepOut = updatesWalker.stepIn(schedule);
   update();
+  stepOut();
   return [elementCache, update, destroy];
 };
 
@@ -1308,16 +1412,16 @@ var createFragment = function createFragment(vNodes) {
   var destroyHandlers = [];
   vNodes.forEach(function (vNode) {
     // const [ $el ] = renderNode(vNode);
-    var _renderNode3 = renderNode(vNode),
-        _renderNode4 = _slicedToArray(_renderNode3, 3),
-        $el = _renderNode4[0],
-        update = _renderNode4[1],
-        destroy = _renderNode4[2];
+    var _renderNode5 = renderNode(vNode),
+        _renderNode6 = _slicedToArray(_renderNode5, 3),
+        $el = _renderNode6[0],
+        update = _renderNode6[1],
+        destroy = _renderNode6[2];
 
     $elements.push($el);
     update && updates.push(update);
     destroy && destroyHandlers.push(destroy);
-  });
+  }); // Do we need fragments as function (reactive getter????)
 
   var update = function update($parent) {
     updates.forEach(function (update) {
@@ -1338,7 +1442,8 @@ var createElement = function createElement(_ref) {
   var tagName = _ref.tagName,
       attrs = _ref.attrs,
       children = _ref.children;
-  var updates = [];
+  // const updates = [];
+  var schedule = (0, _scheduler.scheduler)(updatesWalker.current);
   var destroyHandlers = [];
   var $el = document.createElement(tagName);
 
@@ -1351,9 +1456,10 @@ var createElement = function createElement(_ref) {
       if (k.match(_attrs.eventHandler)) {
         $el[k] = v;
       } else if (typeof v === 'function') {
-        var _update = _attrs.updateAttr.bind(null, $el, k, v);
+        var _update = _attrs.updateAttr.bind(null, $el, k, v); // updates.push(update);
 
-        updates.push(_update);
+
+        v.subscribe(schedule.bind(null, _update)); // this won't work with v.subscribe
 
         _update();
       } else {
@@ -1370,14 +1476,18 @@ var createElement = function createElement(_ref) {
     try {
       for (var _iterator = children[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
         var child = _step.value;
+        var stepOut = updatesWalker.stepIn(schedule);
 
-        var _renderNode5 = renderNode(child),
-            _renderNode6 = _slicedToArray(_renderNode5, 3),
-            element = _renderNode6[0],
-            _update2 = _renderNode6[1],
-            destroyHandler = _renderNode6[2];
+        var _renderNode7 = renderNode(child),
+            _renderNode8 = _slicedToArray(_renderNode7, 3),
+            element = _renderNode8[0],
+            _update2 = _renderNode8[1],
+            destroyHandler = _renderNode8[2];
 
-        _update2 && updates.push(_update2);
+        stepOut(); // update && updates.push(update);
+        // no updates needed due to walker and the fact we dont support
+        // children expression (we achieve the same with fragments)
+
         destroyHandler && destroyHandlers.push(destroyHandler); // update && update($el);
 
         (0, _patch.patch)($el, element);
@@ -1396,13 +1506,10 @@ var createElement = function createElement(_ref) {
         }
       }
     }
-  }
+  } // const update = () => {
+  //   updates.forEach(update => update($el))
+  // };
 
-  var update = function update() {
-    updates.forEach(function (update) {
-      return update($el);
-    });
-  };
 
   var destroy = function destroy() {
     destroyHandlers.forEach(function (fn) {
@@ -1417,6 +1524,7 @@ var createComponent = function createComponent(_ref2) {
   var component = _ref2.tagName,
       attrs = _ref2.attrs,
       children = _ref2.children;
+  var schedule = (0, _scheduler.scheduler)(updatesWalker.current);
   var unsubscribeList = [];
   var updateObservable = (0, _observable.createObservable)();
   var destroyObservable = (0, _observable.createObservable)();
@@ -1439,7 +1547,7 @@ var createComponent = function createComponent(_ref2) {
     });
   };
 
-  var _renderNode7 = renderNode(component({
+  var _renderNode9 = renderNode(component({
     attrs: attrs,
     children: children,
     useEffect: _hooks.useEffect.bind({
@@ -1453,17 +1561,23 @@ var createComponent = function createComponent(_ref2) {
     useState: _hooks.useState.bind(connectState),
     useRef: _hooks.useRef
   })),
-      _renderNode8 = _slicedToArray(_renderNode7, 2),
-      $el = _renderNode8[0],
-      updateDom = _renderNode8[1];
+      _renderNode10 = _slicedToArray(_renderNode9, 2),
+      $el = _renderNode10[0],
+      updateDom = _renderNode10[1];
 
   return [$el, update, destroy];
 };
-},{"./env":"src/framework/env.js","./patch":"src/framework/patch.js","./observable":"src/framework/observable.js","./hooks":"src/framework/hooks.js","./attrs":"src/framework/attrs.js"}],"src/framework/index.js":[function(require,module,exports) {
+},{"./env":"src/framework/env.js","./patch":"src/framework/patch.js","./observable":"src/framework/observable.js","./hooks":"src/framework/hooks.js","./attrs":"src/framework/attrs.js","./scheduler":"src/framework/scheduler.js","./walker":"src/framework/walker.js"}],"src/framework/index.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
+});
+Object.defineProperty(exports, "mount", {
+  enumerable: true,
+  get: function () {
+    return _render.mount;
+  }
 });
 Object.defineProperty(exports, "$and", {
   enumerable: true,
@@ -1483,7 +1597,7 @@ Object.defineProperty(exports, "$if", {
     return _extras.$if;
   }
 });
-exports.mount = exports.h = void 0;
+exports.h = void 0;
 
 var _state = require("./state");
 
@@ -1492,14 +1606,6 @@ var _render = require("./render");
 var _patch = require("./patch");
 
 var _extras = require("./extras");
-
-function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
-
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
-
-function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
-
-function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
 var env = {
   isRenderMode: true
@@ -1520,18 +1626,6 @@ var h = function h(tagName) {
 };
 
 exports.h = h;
-
-var mount = function mount(hdom, $target) {
-  var _renderNode = (0, _render.renderNode)(hdom),
-      _renderNode2 = _slicedToArray(_renderNode, 2),
-      $el = _renderNode2[0],
-      update = _renderNode2[1];
-
-  window.update = update;
-  (0, _patch.patch)($target, $el);
-};
-
-exports.mount = mount;
 },{"./state":"src/framework/state.js","./render":"src/framework/render.js","./patch":"src/framework/patch.js","./extras":"src/framework/extras.js"}],"src/index2.js":[function(require,module,exports) {
 "use strict";
 
@@ -1738,7 +1832,7 @@ console.time();
 })), document.body); // mount(<Test />, document.body);
 
 console.timeEnd();
-},{"./framework":"src/framework/index.js"}],"C:/Users/dane/AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"./framework":"src/framework/index.js"}],"../../AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -1766,7 +1860,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "55473" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "64523" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
@@ -1942,5 +2036,5 @@ function hmrAcceptRun(bundle, id) {
     return true;
   }
 }
-},{}]},{},["C:/Users/dane/AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js","src/index2.js"], null)
+},{}]},{},["../../AppData/Roaming/npm/node_modules/parcel-bundler/src/builtins/hmr-runtime.js","src/index2.js"], null)
 //# sourceMappingURL=/index2.943df8ae.js.map

@@ -9,6 +9,15 @@ import Walker from './walker'
 
 const updatesWalker = new Walker;
 
+export const mount = (hdom, $target) => {
+  const [ $el, update ] = renderNode(hdom);
+  window.update = update;
+  update($target);
+  // this wasn't needed before ?
+
+  patch($target, $el);
+}
+
 export const renderNode = (vNode) => {
   const type = typeof vNode;
   if (type === 'boolean' || vNode == null) {
@@ -42,7 +51,7 @@ const createExpression = (fn) => {
       const [ element, updates, destroyUpdate ] = renderNode(result); // computed
       destroy();
       destroyCache = destroyUpdate;
-      $parent && schedule(patch.bind(this, $parent, element, elementCache);
+      $parent && schedule(patch.bind(this, $parent, element, elementCache));
       elementCache = element;
       resultCache = result;
       updatesCache = updates;
