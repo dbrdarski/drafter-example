@@ -1,4 +1,4 @@
-import { createValue, createState, createComputed, createEffect } from './state';
+import { createValue, createState, createComputed, createEffect } from './state.js';
 
 // export function hook(method, ...args) {
 //   console.log({ method, args })
@@ -27,15 +27,14 @@ export function useState(state) {
 
 export function useEffect(deps, effectFn) {
   const { runEffect, destroyEffect } = createEffect(deps, effectFn);
-  deps ? this.subscribeToUpdates(runEffect) : setTimeout(runEffect);
+  deps ? this.subscribeToUpdates(runEffect) : queueMicrotask(runEffect);
   this.subscribeToDestroy(destroyEffect);
 }
 
 export function useRef(value) {
   return (...args) => {
     if (args.length) {
-      const [ update ] = args;
-      value = update;
+      [ value ] = args;
     }
     return value;
   }

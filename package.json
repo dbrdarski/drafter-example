@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "parcel index2.html --cache-dir .parcel-cache",
     "test": "echo \"Error: no test specified\" && exit 1"

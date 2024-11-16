@@ -1,9 +1,9 @@
-import { env } from './env';
-import { patch } from './patch';
-// import { createValue, createState, createComputed } from './state';
-import { createObservable } from './observable';
-import { useEffect, useValue, useState, useComputed, useRef } from './hooks';
-import { eventHandler, updateAttr } from './attrs';
+import { env } from './env.js';
+import { patch } from './patch.js';
+// import { createValue, createState, createComputed } from './state.js';
+import { createObservable } from './observable.js';
+import { useEffect, useValue, useState, useComputed, useRef } from './hooks.js';
+import { eventHandler, updateAttr } from './attrs.js';
 
 export const renderNode = (vNode) => {
   const type = typeof vNode;
@@ -21,7 +21,7 @@ export const renderNode = (vNode) => {
   return createElement(vNode);
 }
 
-const createEmptyNode = () => [ document.createTextNode(''), false ]
+const createEmptyNode = () => [ document.createComment(''), false ]
 
 const createTextNode = (text) => [ document.createTextNode(text), false ];
 
@@ -113,21 +113,15 @@ const createElement = ({ tagName, attrs, children }) => {
 }
 
 const createComponent = ({ tagName: component, attrs, children }) => {
-  const unsubscribeList = [];
   const updateObservable = createObservable();
   const destroyObservable = createObservable();
-
-  const destroy = () => {
-    unsubscribeList.forEach( d => d());
-    destroyObservable.message();
-  };
 
   const update = (...args) => {
     updateDom(...args);
     updateObservable.message();
   }
 
-  const connectState = (subscribe) => setTimeout(() => unsubscribeList.push(subscribe(update)));
+  const connectState = (subscribe) => queueMicrotask(() => destroyObservable.subscribe(subscribe(update)));
   const [ $el, updateDom ] = renderNode(component({
     attrs,
     children,
@@ -143,5 +137,5 @@ const createComponent = ({ tagName: component, attrs, children }) => {
     useRef
   }));
 
-  return [ $el, update, destroy ];
+  return [ $el, update, destroyObservable.message ];
 }

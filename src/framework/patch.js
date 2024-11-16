@@ -1,9 +1,9 @@
 export const patch = ($parent, $new, $old) => {
-  const newList = Array.isArray($new);
-  const oldList = Array.isArray($old);
-  ( newList
-    ? (oldList ? patchManyToMany : patchManyToOne)
-    : (oldList ? patchOneToMany : patchOneToOne)
+  const newIsFragment = Array.isArray($new);
+  const oldIsFragment = Array.isArray($old);
+  (newIsFragment
+    ? (oldIsFragment ? patchManyToMany : patchManyToOne)
+    : (oldIsFragment ? patchOneToMany : patchOneToOne)
   )($parent, $new, $old)
 };
 
@@ -12,12 +12,17 @@ const patchOneToOne = ($parent, $new, $old) => $old
   : $parent.appendChild($new);
 
 const patchManyToOne = ($parent, $new, $old) => $old
-  ? ( $new.forEach($n => $parent.insertBefore($n, $old)), $parent.removeChild($old))
+  ? (
+    $new.forEach($n => $parent.insertBefore($n, $old)),
+    $parent.removeChild($old)
+  )
   : $new.forEach($n => $parent.appendChild($n));
 
 const patchOneToMany = ($parent, $new, $old) => $old
-  ? ( $parent.insertBefore($new, $old[0]), $old.forEach($o => $parent.removeChild($o)) )
-  : $parent.appendChild($new);
+  ? (
+    $parent.insertBefore($new, $old[0]),
+    $old.forEach($o => $parent.removeChild($o))
+  ) : $parent.appendChild($new);
 
 const patchManyToMany = ($parent, $new, $old) => {
   const newLength = $new.length;

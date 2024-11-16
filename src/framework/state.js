@@ -2,16 +2,16 @@
 // TODO: Investigate: assign, deep assign.
 // TODO: Support arrays in shorthand mode
 
-const { isPrimitive, isObject, isCallable, copy, map, empty, each } = require('./utils');
-const { createObservable } = require('./observable');
-const { flatten } = require('./extras')
-const { env } = require('./env')
+import { isPrimitive, isObject, isCallable, copy, map, empty, each } from './utils.js'
+import { createObservable } from './observable.js'
+import { flatten } from './extras.js'
+import { env } from './env.js'
 
 const ERR_STATE_UPDATE = 'State update argument must either be an Object/Array or an update function.';
 
 const stateDefaults = { mutable: false, };
 
-const createValue = (value) => {
+export const createValue = (value) => {
 	const { message, subscribe } = createObservable();
 	const $state = () => value;
 	const setState = (v) => {
@@ -34,7 +34,10 @@ const createValue = (value) => {
 };
 
 
-const createEffect = (deps, effectFn) => {
+// not FIINISHED!!!! Cache is only defined but not used!
+// will run every time!
+
+export const createEffect = (deps, effectFn) => {
 	let destroy, depsCache;
 
   const destroyEffect = () => {
@@ -43,7 +46,7 @@ const createEffect = (deps, effectFn) => {
 
 	const runEffect = () => {
 		destroyEffect();
-		depsCache = map(deps, (x) => flatten(x));
+		depsCache = map(deps, dep => flatten(dep));
 		destroy = effectFn(depsCache);
 	};
 
@@ -53,16 +56,20 @@ const createEffect = (deps, effectFn) => {
   };
 };
 
-const createComputed = (deps, computedFn) => {
+// not FIINISHED!!!!
+// computed don't propagate the change!!!!
+// this works since effects also run every time!!!!
+
+export const createComputed = (deps, computedFn) => {
 	const { subscribe } = createObservable();
-	const $state = () => computedFn(map(deps, (x) => flatten(x)));
+	const $state = () => computedFn(map(deps, dep => flatten(dep)));
 	return {
 		$state,
 		subscribe
 	}
 };
 
-const createState = (state = {}, options) => {
+export const createState = (state = {}, options) => {
 	const { mutable, env } = Object.assign({}, stateDefaults, options);
 	const { message, subscribe } = createObservable();
 	const handler = (stateUpdate) => {
@@ -102,9 +109,9 @@ const mutatorList = { pop: 0, shift: 0, push: 1, unshift: 1, splice: 0, reverse:
 const apply = (fn) => fn();
 const applyToObjectKeys = (proxy) => (v, k) => isPrimitive(v) || proxy[k]();
 
-const subProxy = (subarray, prop, subproxies, { handler, mutable, env }) => {
+const subProxy = (reference, prop, subproxies, { handler, mutable, env }) => {
 	if (!subproxies.hasOwnProperty(prop)) {
-		subproxies[prop] = createProxy(subarray, {
+		subproxies[prop] = createProxy(reference, {
 			handler,
 			mutable
 		});
@@ -123,7 +130,7 @@ const stateGuard = (state, { mutable = false } = {}) => {
 	}
 };
 
-const createProxy = (record, { handler, mutable = false, env = {}} = {}) => {
+export const createProxy = (record, { handler, mutable = false, env = {}} = {}) => {
 	let proxy,
 			subproxies = {},
 			state = stateGuard(record, { mutable });
@@ -219,14 +226,3 @@ const createProxy = (record, { handler, mutable = false, env = {}} = {}) => {
 		}
 	});
 };
-
-module.exports = {
-  produce,
-	createEffect,
-	createValue,
-	createState,
-	createComputed,
-	createProxy,
-	stateGuard,
-	subProxy
-}

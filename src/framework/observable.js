@@ -1,43 +1,43 @@
 export const createObservable = () => {
-  let dirty = false;
-  let observers = [];
+  let dirty = false
+  let observers = []
 
   function update (newObserverList) {
-    this.position = newObserverList.length;
-    newObserverList.push(this);
+    this.position = newObserverList.length
+    newObserverList.push(this)
   }
 
-  const subscribe = (fn) => {
-    const item = { fn, update, position: void 0 };
-    item.update(observers);
+  const subscribe = fn => {
+    const item = { fn, update, position: 0 }
+    item.update(observers)
 
     return () => {
-      observers[item.position] = false;
-      dirty = true;
+      observers[item.position] = false
+      dirty = true
     }
-  };
+  }
 
-  const message = ( msg ) => {
+  const message = msg => {
     if (dirty) {
-      let newObserverList = [];
+      let newObserverList = []
       for (observers of observers) {
         if (observer) {
-          observer.fn( msg );
+          observer.fn(msg)
           observer.update(newObserverList)
         }
       }
-      observers = newObserverList;
-      dirty = false;
+      observers = newObserverList
+      dirty = false
     } else {
       observers.forEach(
-        (o) => {
-          return o.fn( msg )
+        o => {
+          return o.fn(msg)
         }
-      );
+      )
     }
-	};
+	}
   return {
     subscribe,
     message
-  };
+  }
 }
