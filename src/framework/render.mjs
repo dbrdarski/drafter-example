@@ -1,9 +1,9 @@
-import { env } from './env.js';
-import { patch } from './patch.js';
-// import { createValue, createState, createComputed } from './state.js';
-import { createObservable } from './observable.js';
-import { useEffect, useValue, useState, useComputed, useRef } from './hooks.js';
-import { eventHandler, updateAttr } from './attrs.js';
+import { env } from './env.mjs';
+import { patch } from './patch.mjs';
+// import { createValue, createState, createComputed } from './state.mjs';
+import { createObservable } from './observable.mjs';
+import { useEffect, useValue, useState, useComputed, useRef } from './hooks.mjs';
+import { eventHandler, updateAttr } from './attrs.mjs';
 
 export const renderNode = (vNode) => {
   const type = typeof vNode;

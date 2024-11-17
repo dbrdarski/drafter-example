@@ -2,10 +2,10 @@
 // TODO: Investigate: assign, deep assign.
 // TODO: Support arrays in shorthand mode
 
-import { isPrimitive, isObject, isCallable, copy, map, empty, each } from './utils.js'
-import { createObservable } from './observable.js'
-import { flatten } from './extras.js'
-import { env } from './env.js'
+import { isPrimitive, isObject, isCallable, copy, map, empty, each } from './utils.mjs'
+import { createObservable } from './observable.mjs'
+import { flatten } from './extras.mjs'
+import { env } from './env.mjs'
 
 const ERR_STATE_UPDATE = 'State update argument must either be an Object/Array or an update function.';
 

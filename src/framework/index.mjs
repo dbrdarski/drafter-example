@@ -1,7 +1,7 @@
-import { createState } from './state.js';
-import { renderNode } from './render.js';
-import { patch } from './patch.js';
-import { $and, $or, $if } from './extras.js';
+import { createState } from './state.mjs';
+import { renderNode } from './render.mjs';
+import { patch } from './patch.mjs';
+export { $and, $or, $if } from './extras.mjs';
 
 export const env = { isRenderMode: true }
 
@@ -13,12 +13,4 @@ export const mount = (hdom, $target) => {
   const [ $el, update ] = renderNode(hdom);
   window.update = update;
   patch($target, $el);
-}
-
-export default {
-  h,
-  mount,
-  $if,
-  $and,
-  $or
 }

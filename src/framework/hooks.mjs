@@ -1,4 +1,4 @@
-import { createValue, createState, createComputed, createEffect } from './state.js';
+import { createValue, createState, createComputed, createEffect } from './state.mjs';
 
 // export function hook(method, ...args) {
 //   console.log({ method, args })

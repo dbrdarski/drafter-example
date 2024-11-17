@@ -2,7 +2,7 @@
   "name": "drafter-example",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "index.mjs",
   "type": "module",
   "scripts": {
     "start": "parcel index2.html --cache-dir .parcel-cache",
